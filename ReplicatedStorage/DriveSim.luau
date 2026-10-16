@@ -7,16 +7,22 @@ local DriveSim = {}
 local BODY_HOVER = 1.7
 local WALL_SKIN = 0.35
 local MAX_STEP_SLACK = 0.75
+local GRAVITY = 168
+local MAX_LAUNCH = 52
+local LAND_BOUNCE = 0.26
+local BOUNCE_MIN = 22
 
 export type State = {
 	speed: number,
 	lastSafe: CFrame?,
+	vy: number,
 }
 
 function DriveSim.newState(at: CFrame?): State
 	return {
 		speed = 0,
 		lastSafe = at,
+		vy = 0,
 	}
 end
 
@@ -196,7 +202,28 @@ local function bounceMove(
 		pos = startPos + delta.Unit * maxMove
 	end
 
-	pos = Vector3.new(pos.X, groundY(model, character, pos), pos.Z)
+	local ground = groundY(model, character, pos)
+	local y = startPos.Y
+	local vy = state.vy
+	if y <= ground + 0.4 then
+		local rise = ground - y
+		if rise > 0 then
+			y = ground
+			vy = math.min(MAX_LAUNCH, math.max(vy, rise / math.max(dt, 1 / 240)))
+		end
+	end
+	vy -= GRAVITY * dt
+	y += vy * dt
+	if y < ground then
+		y = ground
+		if vy < -BOUNCE_MIN then
+			vy = -vy * LAND_BOUNCE
+		else
+			vy = 0
+		end
+	end
+	state.vy = vy
+	pos = Vector3.new(pos.X, y, pos.Z)
 	return pos, flatLook, speed
 end
 

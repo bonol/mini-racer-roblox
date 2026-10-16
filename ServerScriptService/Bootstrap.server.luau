@@ -1,11 +1,11 @@
 local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Remotes"))
 local TrackService = require(script.Parent:WaitForChild("TrackService"))
 local VehicleService = require(script.Parent:WaitForChild("VehicleService"))
-local RaceService = require(script.Parent:WaitForChild("RaceService"))
+local MatchService = require(script.Parent:WaitForChild("MatchService"))
 local PlayerService = require(script.Parent:WaitForChild("PlayerService"))
 
 Remotes.ensure()
 TrackService.buildIfNeeded()
 VehicleService.start()
-RaceService.bindCheckpoints()
+MatchService.start()
 PlayerService.start()

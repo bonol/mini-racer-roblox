@@ -5,37 +5,52 @@ local Constants = require(game:GetService("ReplicatedStorage"):WaitForChild("Con
 
 local TrackService = {}
 
--- Clockwise GP: pit start/finish, T1, south esses (clear of the pit), west hairpin,
--- then a right-hander onto the pit before the start/finish stripe.
+-- Clockwise: pit straight, sharp T1 hairpin, flowing S into a sharp south
+-- hairpin, then a longer west U back onto the start/finish stripe.
 local CONTROL = {
-	Vector3.new(-900, 0, 140),
-	Vector3.new(-620, 0, 140),
-	Vector3.new(-240, 0, 140),
-	Vector3.new(120, 0, 140),
-	Vector3.new(360, 0, 140),
-	Vector3.new(500, 0, 110),
-	Vector3.new(580, 0, 20),
-	Vector3.new(560, 0, -90),
-	Vector3.new(460, 0, -180),
-	Vector3.new(280, 0, -240),
-	Vector3.new(40, 0, -250),
-	Vector3.new(-180, 0, -210),
-	Vector3.new(-380, 0, -90),
-	Vector3.new(-560, 0, -50),
-	Vector3.new(-740, 0, -130),
-	Vector3.new(-920, 0, -210),
-	Vector3.new(-1120, 0, -220),
-	Vector3.new(-1280, 0, -210),
-	Vector3.new(-1420, 0, -190),
-	Vector3.new(-1540, 0, -120),
-	Vector3.new(-1640, 0, 30),
-	Vector3.new(-1540, 0, 160),
-	Vector3.new(-1420, 0, 250),
-	Vector3.new(-1320, 0, 248),
-	Vector3.new(-1200, 0, 230),
-	Vector3.new(-1100, 0, 195),
-	Vector3.new(-1020, 0, 160),
-	Vector3.new(-960, 0, 144),
+	Vector3.new(-720, 0, -165),
+	Vector3.new(-420, 0, -165),
+	Vector3.new(-80, 0, -165),
+	Vector3.new(280, 0, -165),
+	Vector3.new(640, 0, -165),
+	Vector3.new(980, 0, -165),
+	Vector3.new(1200, 0, -165),
+	Vector3.new(1330, 0, -165),
+	-- Sharp T1 hairpin
+	Vector3.new(1410, 0, -185),
+	Vector3.new(1445, 0, -250),
+	Vector3.new(1410, 0, -315),
+	Vector3.new(1330, 0, -335),
+	Vector3.new(1200, 0, -340),
+	Vector3.new(980, 0, -360),
+	Vector3.new(740, 0, -470),
+	Vector3.new(500, 0, -555),
+	Vector3.new(280, 0, -545),
+	Vector3.new(80, 0, -470),
+	-- First S, then sharp south hairpin
+	Vector3.new(-40, 0, -385),
+	Vector3.new(-160, 0, -345),
+	Vector3.new(-250, 0, -410),
+	Vector3.new(-280, 0, -540),
+	Vector3.new(-295, 0, -670),
+	Vector3.new(-370, 0, -745),
+	Vector3.new(-490, 0, -745),
+	Vector3.new(-565, 0, -670),
+	Vector3.new(-585, 0, -540),
+	Vector3.new(-620, 0, -500),
+	Vector3.new(-760, 0, -495),
+	Vector3.new(-940, 0, -520),
+	Vector3.new(-1060, 0, -515),
+	Vector3.new(-1260, 0, -430),
+	-- Slightly longer west U, flattening onto the pit
+	Vector3.new(-1380, 0, -300),
+	Vector3.new(-1400, 0, -160),
+	Vector3.new(-1320, 0, -50),
+	Vector3.new(-1160, 0, -20),
+	Vector3.new(-980, 0, -70),
+	Vector3.new(-900, 0, -140),
+	Vector3.new(-840, 0, -165),
+	Vector3.new(-780, 0, -165),
 }
 
 local function wrap(points: { Vector3 }, index: number): Vector3
@@ -103,6 +118,80 @@ local function sampleCenterline(): { Vector3 }
 	return points
 end
 
+-- Pit whoops sit after the last corner, well clear of the grid / S/F stripe.
+local PIT_WHOOP_NEAR = 420
+local PIT_WHOOP_SPAN = 556
+local T1_WHOOP_DELAY = 48
+local T1_WHOOP_SPAN = PIT_WHOOP_SPAN * 2
+local WHOOP_MAX = 12.8
+
+local function whoopHeight(s: number, span: number, waveScale: number): number
+	if s <= 0 or s >= span then
+		return 0
+	end
+	local env = math.sin((s / span) * math.pi)
+	local y = env * (5.2 + 4.4 * math.sin(s / (9.2 * waveScale)) + 2.8 * math.sin(s / (5.8 * waveScale) + 0.9))
+	return math.clamp(y, 0, WHOOP_MAX)
+end
+
+local function applyBumps(centerline: { Vector3 }, spawnCFrame: CFrame)
+	local n = #centerline
+	local cum = table.create(n)
+	local total = 0
+	for i = 1, n do
+		cum[i] = total
+		local a = centerline[i]
+		local b = wrap(centerline, i + 1)
+		total += (Vector3.new(b.X, 0, b.Z) - Vector3.new(a.X, 0, a.Z)).Magnitude
+	end
+
+	local spawnIdx = 1
+	local best = math.huge
+	local spawn = spawnCFrame.Position
+	for i, p in centerline do
+		local dx, dz = p.X - spawn.X, p.Z - spawn.Z
+		local d = dx * dx + dz * dz
+		if d < best then
+			best = d
+			spawnIdx = i
+		end
+	end
+	local spawnAlong = cum[spawnIdx]
+
+	-- Eastmost point is the T1 hairpin apex; exit once we are heading back west.
+	local t1Idx = 1
+	local maxX = -math.huge
+	for i, p in centerline do
+		if p.X > maxX then
+			maxX = p.X
+			t1Idx = i
+		end
+	end
+	local t1ExitAlong = cum[t1Idx]
+	for step = 1, n do
+		local idx = ((t1Idx + step - 1) % n) + 1
+		local look = heading(centerline[idx], wrap(centerline, idx + 1))
+		local along = (cum[idx] - cum[t1Idx]) % total
+		if along > 90 and look.X < -0.7 then
+			t1ExitAlong = cum[idx]
+			break
+		end
+	end
+
+	for i, p in centerline do
+		local beforeFinish = (spawnAlong - cum[i]) % total
+		local afterT1 = (cum[i] - t1ExitAlong) % total
+		local y = 0
+		if beforeFinish > PIT_WHOOP_NEAR and beforeFinish < PIT_WHOOP_NEAR + PIT_WHOOP_SPAN then
+			y = math.max(y, whoopHeight(beforeFinish - PIT_WHOOP_NEAR, PIT_WHOOP_SPAN, 1))
+		end
+		if afterT1 > T1_WHOOP_DELAY and afterT1 < T1_WHOOP_DELAY + T1_WHOOP_SPAN then
+			y = math.max(y, whoopHeight(afterT1 - T1_WHOOP_DELAY, T1_WHOOP_SPAN, 2))
+		end
+		centerline[i] = Vector3.new(p.X, y, p.Z)
+	end
+end
+
 local function part(props: { [string]: any }): Part
 	local instance = Instance.new("Part")
 	instance.Anchored = true
@@ -137,7 +226,7 @@ local function offsetLoop(centerline: { Vector3 }, dist: number): { Vector3 }
 			scale = math.clamp(scale, -limit, limit)
 			offset = bis * scale
 		end
-		table.insert(pts, Vector3.new(p.X + offset.X, 0, p.Z + offset.Z))
+		table.insert(pts, Vector3.new(p.X + offset.X, p.Y, p.Z + offset.Z))
 	end
 	return pts
 end
@@ -158,16 +247,18 @@ local function placeStrip(
 	for i = 1, #points do
 		local a = points[i]
 		local b = wrap(points, i + 1)
-		local dx, dz = b.X - a.X, b.Z - a.Z
-		local len = math.sqrt(dx * dx + dz * dz)
+		local yA = a.Y + y
+		local yB = b.Y + y
+		local dx, dy, dz = b.X - a.X, yB - yA, b.Z - a.Z
+		local len = math.sqrt(dx * dx + dy * dy + dz * dz)
 		if len < 0.45 then
 			continue
 		end
-		local mid = Vector3.new((a.X + b.X) * 0.5, y, (a.Z + b.Z) * 0.5)
+		local mid = Vector3.new((a.X + b.X) * 0.5, (yA + yB) * 0.5, (a.Z + b.Z) * 0.5)
 		part({
 			Name = name,
 			Size = Vector3.new(sizeX, sizeY, len + extra),
-			CFrame = CFrame.lookAt(mid, Vector3.new(b.X, y, b.Z)),
+			CFrame = CFrame.lookAt(mid, Vector3.new(b.X, yB, b.Z)),
 			Color = colorFor(i),
 			Material = material,
 			CanCollide = canCollide,
@@ -289,6 +380,7 @@ local function build()
 
 	local acc = 0
 	local spawnCFrame = pitStraightSpawn(centerline)
+	applyBumps(centerline, spawnCFrame)
 	local checkpointAt = {
 		[1] = total * 0.25,
 		[2] = total * 0.5,
@@ -299,8 +391,8 @@ local function build()
 	for i = 1, #centerline do
 		local a = centerline[i]
 		local b = wrap(centerline, i + 1)
-		local p0 = Vector3.new(a.X, 1.2, a.Z)
-		local p1 = Vector3.new(b.X, 1.2, b.Z)
+		local p0 = Vector3.new(a.X, 1.2 + a.Y, a.Z)
+		local p1 = Vector3.new(b.X, 1.2 + b.Y, b.Z)
 		local delta = p1 - p0
 		local length = delta.Magnitude
 		if length < 1 then
@@ -392,7 +484,24 @@ function TrackService.getSpawnCFrame(): CFrame
 		local spawn = tagged[1] :: BasePart
 		return spawn.CFrame + Vector3.new(0, Constants.Car.SpawnHeight, 0)
 	end
-	return CFrame.new(-300, Constants.Car.SpawnHeight, 140)
+	return CFrame.new(250, Constants.Car.SpawnHeight, -165)
+end
+
+local GRID_COLS = 4
+local GRID_COL_SPACING = 16
+local GRID_ROW_SPACING = 20
+local GRID_BACK = 16
+
+function TrackService.getGridCFrame(slotIndex: number, slotCount: number): CFrame
+	local spawn = TrackService.getSpawnCFrame()
+	local count = math.max(slotCount, 1)
+	local index = math.clamp(math.floor(slotIndex), 1, count) - 1
+	local col = index % GRID_COLS
+	local row = math.floor(index / GRID_COLS)
+	local colsThisRow = math.min(GRID_COLS, count - row * GRID_COLS)
+	local x = (col - (colsThisRow - 1) / 2) * GRID_COL_SPACING
+	local z = GRID_BACK + row * GRID_ROW_SPACING
+	return spawn * CFrame.new(x, 0, z)
 end
 
 function TrackService.getCheckpoints(): { BasePart }

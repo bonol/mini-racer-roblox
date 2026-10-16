@@ -1,8 +1,10 @@
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local Constants = require(game:GetService("ReplicatedStorage"):WaitForChild("Constants"))
-local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Remotes"))
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
+local KartPrototype = require(ReplicatedStorage:WaitForChild("KartPrototype"))
 local TrackService = require(script.Parent:WaitForChild("TrackService"))
 
 local VehicleService = {}
@@ -18,13 +20,7 @@ local occupantConns: { [Player]: RBXScriptConnection } = {}
 local promptConns: { [Player]: RBXScriptConnection } = {}
 local driveConnection: RBXScriptConnection? = nil
 local inputConnection: RBXScriptConnection? = nil
-
-local function weld(a: BasePart, b: BasePart)
-	local w = Instance.new("WeldConstraint")
-	w.Part0 = a
-	w.Part1 = b
-	w.Parent = a
-end
+local paddockHandler: ((Player, string) -> ())? = nil
 
 local function setCarAnchored(model: Model, anchored: boolean)
 	for _, part in model:GetDescendants() do
@@ -52,91 +48,43 @@ local function placeBesideCar(character: Model, body: BasePart)
 	root.AssemblyAngularVelocity = Vector3.zero
 end
 
-local function makeCar(): Model
-	local model = Instance.new("Model")
-	model.Name = Constants.Car.Name
-
-	local body = Instance.new("Part")
-	body.Name = "Body"
-	body.Size = Vector3.new(4.4, 0.8, 8.4)
-	body.Color = Color3.fromRGB(200, 24, 36)
-	body.Material = Enum.Material.SmoothPlastic
-	body.Anchored = true
-	body.CanCollide = true
-	body.Parent = model
-
-	local cabin = Instance.new("Part")
-	cabin.Name = "Cabin"
-	cabin.Size = Vector3.new(2.6, 0.7, 2.4)
-	cabin.Color = Color3.fromRGB(18, 20, 26)
-	cabin.Material = Enum.Material.SmoothPlastic
-	cabin.Massless = true
-	cabin.CanCollide = false
-	cabin.Anchored = true
-	cabin.Parent = model
-
-	local nose = Instance.new("Part")
-	nose.Name = "Nose"
-	nose.Size = Vector3.new(1.4, 0.4, 2.2)
-	nose.Color = Color3.fromRGB(230, 230, 235)
-	nose.Material = Enum.Material.SmoothPlastic
-	nose.Massless = true
-	nose.CanCollide = false
-	nose.Anchored = true
-	nose.Parent = model
-
-	local seat = Instance.new("VehicleSeat")
-	seat.Name = "Seat"
-	seat.Size = Vector3.new(3.2, 0.7, 3.2)
-	seat.Color = Color3.fromRGB(20, 20, 24)
-	seat.HeadsUpDisplay = false
-	seat.MaxSpeed = 500
-	seat.Torque = 0
-	seat.TurnSpeed = 0
-	seat.Disabled = false
-	seat.Anchored = true
-	seat.Parent = model
-
-	local wheelOffsets = {
-		Vector3.new(-2.3, -0.45, 2.7),
-		Vector3.new(2.3, -0.45, 2.7),
-		Vector3.new(-2.3, -0.45, -2.8),
-		Vector3.new(2.3, -0.45, -2.8),
-	}
-	for i, offset in wheelOffsets do
-		local wheel = Instance.new("Part")
-		wheel.Name = `Wheel{i}`
-		wheel.Shape = Enum.PartType.Cylinder
-		wheel.Size = Vector3.new(1.05, 1.7, 1.7)
-		wheel.Color = Color3.fromRGB(24, 24, 24)
-		wheel.Material = Enum.Material.Rubber
-		wheel.Massless = true
-		wheel.CanCollide = false
-		wheel.Anchored = true
-		wheel.CFrame = body.CFrame * CFrame.new(offset) * CFrame.Angles(0, 0, math.rad(90))
-		wheel.Parent = model
-		weld(body, wheel)
+local function spawnPaddock()
+	local existing = Workspace:FindFirstChild("KartPaddock")
+	if existing then
+		existing:Destroy()
 	end
 
-	cabin.CFrame = body.CFrame * CFrame.new(0, 0.7, 0.4)
-	nose.CFrame = body.CFrame * CFrame.new(0, 0.1, -4.6)
-	seat.CFrame = body.CFrame * CFrame.new(0, 1.15, 0.2)
-	weld(body, cabin)
-	weld(body, nose)
-	weld(body, seat)
+	local folder = Instance.new("Folder")
+	folder.Name = "KartPaddock"
 
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = "EnterCar"
-	prompt.ActionText = "Drive"
-	prompt.ObjectText = "Mini Racer"
-	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = 16
-	prompt.RequiresLineOfSight = false
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
-	prompt.Parent = seat
+	local origin = TrackService.getSpawnCFrame()
+	local palettes = KartPrototype.Palettes
+	for i, palette in palettes do
+		local car = KartPrototype.spawn(palette)
+		KartPrototype.makeDisplay(car)
+		car.Name = "Kart_" .. palette.Id
+		local along = (i - (#palettes + 1) / 2) * 9.5
+		local at = origin * CFrame.new(48, 0, 8 + along)
+		car:PivotTo(CFrame.lookAt(at.Position, Vector3.new(origin.Position.X, at.Position.Y, origin.Position.Z)))
 
-	model.PrimaryPart = body
-	return model
+		local body = car.PrimaryPart
+		if body then
+			body.CanQuery = true
+			local click = Instance.new("ClickDetector")
+			click.Name = "ChooseKart"
+			click.MaxActivationDistance = 120
+			click.Parent = body
+			click.MouseClick:Connect(function(who)
+				if paddockHandler then
+					paddockHandler(who, palette.Id)
+				end
+			end)
+		end
+
+		car.Parent = folder
+	end
+
+	folder.Parent = Workspace
 end
 
 local function ensureDriveLoop()
@@ -217,14 +165,45 @@ function VehicleService.start()
 	if inputConnection then
 		return
 	end
+	KartPrototype.ensureTemplate()
+	spawnPaddock()
 	inputConnection = Remotes.get("DriveInput").OnServerEvent:Connect(function() end)
 end
 
-function VehicleService.spawnFor(player: Player): Model
+function VehicleService.setPaddockHandler(handler: (Player, string) -> ())
+	paddockHandler = handler
+end
+
+function VehicleService.freezeForSelect(player: Player)
+	local character = player.Character
+	if character == nil then
+		return
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = 0
+		humanoid.JumpPower = 0
+		humanoid.JumpHeight = 0
+		humanoid.Sit = false
+		humanoid.AutoRotate = false
+	end
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		root.CFrame = TrackService.getSpawnCFrame() * CFrame.new(0, 1.5, 10)
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+	end
+end
+
+function VehicleService.spawnFor(player: Player, paletteId: string?, slotIndex: number?, slotCount: number?): Model
 	VehicleService.despawn(player)
 
-	local model = makeCar()
-	model:PivotTo(TrackService.getSpawnCFrame())
+	local model = KartPrototype.spawn(KartPrototype.getPalette(paletteId or Constants.Car.DefaultPalette))
+	model.Name = "MiniRacer_" .. player.Name
+	local at = if slotIndex ~= nil
+		then TrackService.getGridCFrame(slotIndex, slotCount or 1)
+		else TrackService.getSpawnCFrame()
+	model:PivotTo(at)
 	model.Parent = Workspace
 	cars[player] = model
 	canDrive[player] = false

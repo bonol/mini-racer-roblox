@@ -1,11 +1,18 @@
 local Constants = {
 	Race = {
-		LapCount = 1,
+		LapCount = 20,
 		CountdownSeconds = 3,
 		CheckpointCount = 4,
+		SelectSeconds = 20,
+		MinPlayers = 1,
+		MaxPlayers = 8,
+		LobbyWaitSeconds = 8,
+		PodiumSeconds = 8,
+		DnfAfterWinnerSeconds = 20,
 	},
 	Car = {
 		Name = "MiniRacer",
+		DefaultPalette = "Default",
 		MaxSpeed = 120,
 		Acceleration = 58,
 		Brake = 72,

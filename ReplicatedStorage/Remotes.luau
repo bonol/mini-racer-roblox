@@ -8,6 +8,7 @@ local NAMES = {
 	RaceFinished = "RaceFinished",
 	RequestRestart = "RequestRestart",
 	DriveInput = "DriveInput",
+	SelectKart = "SelectKart",
 }
 
 local Remotes = {

@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 
 local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Remotes"))
-local RaceService = require(script.Parent:WaitForChild("RaceService"))
+local MatchService = require(script.Parent:WaitForChild("MatchService"))
 
 local PlayerService = {}
 
@@ -9,22 +9,22 @@ function PlayerService.start()
 	local function hook(player: Player)
 		player.CharacterAdded:Connect(function()
 			task.wait(0.4)
-			RaceService.start(player)
+			MatchService.addPlayer(player)
 		end)
 		if player.Character then
 			task.defer(function()
-				RaceService.start(player)
+				MatchService.addPlayer(player)
 			end)
 		end
 	end
 
 	Players.PlayerAdded:Connect(hook)
 	Players.PlayerRemoving:Connect(function(player)
-		RaceService.forget(player)
+		MatchService.removePlayer(player)
 	end)
 
 	Remotes.get("RequestRestart").OnServerEvent:Connect(function(player)
-		RaceService.start(player)
+		MatchService.requestRestart(player)
 	end)
 
 	for _, player in Players:GetPlayers() do

@@ -1,7 +1,11 @@
 local RaceHud = require(script.Parent:WaitForChild("RaceHud"))
+local KartSelect = require(script.Parent:WaitForChild("KartSelect"))
 local CameraController = require(script.Parent:WaitForChild("CameraController"))
 local DriveController = require(script.Parent:WaitForChild("DriveController"))
+local WrongWay = require(script.Parent:WaitForChild("WrongWay"))
 
 RaceHud.start()
+KartSelect.start()
 CameraController.start()
 DriveController.start()
+WrongWay.start()

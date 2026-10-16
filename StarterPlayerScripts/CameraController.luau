@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Remotes"))
+
 local CameraController = {}
 
 local FOLLOW_BEHIND = 16
@@ -15,16 +17,62 @@ local function expAlpha(rate: number, dt: number): number
 	return 1 - math.exp(-rate * math.clamp(dt, 1 / 240, 1 / 20))
 end
 
+local function paddockCamera(): CFrame?
+	local folder = Workspace:FindFirstChild("KartPaddock")
+	if folder == nil then
+		return nil
+	end
+	local sum = Vector3.zero
+	local count = 0
+	local sample: BasePart? = nil
+	for _, child in folder:GetChildren() do
+		if child:IsA("Model") and child.PrimaryPart then
+			sum += child.PrimaryPart.Position
+			count += 1
+			sample = child.PrimaryPart
+		end
+	end
+	if count == 0 or sample == nil then
+		return nil
+	end
+	local center = sum / count
+	local look = Vector3.new(sample.CFrame.LookVector.X, 0, sample.CFrame.LookVector.Z)
+	if look.Magnitude < 0.05 then
+		look = Vector3.new(0, 0, -1)
+	else
+		look = look.Unit
+	end
+	local camPos = center + look * 26 + Vector3.new(0, 11, 0)
+	return CFrame.lookAt(camPos, center + Vector3.new(0, 0.8, 0))
+end
+
 function CameraController.start()
 	local player = Players.LocalPlayer
 	local camera = Workspace.CurrentCamera
 	local chasing = false
+	local selecting = false
 	local camDist = FOLLOW_BEHIND
 
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 
+	Remotes.get("RaceStateChanged").OnClientEvent:Connect(function(payload)
+		selecting = payload.state == "Selecting" or payload.state == "Lobby"
+		if selecting then
+			chasing = false
+		end
+	end)
+
 	RunService:BindToRenderStep("MiniRacerCamera", Enum.RenderPriority.Camera.Value, function(dt)
+		if selecting then
+			local garage = paddockCamera()
+			if garage then
+				camera.CameraType = Enum.CameraType.Scriptable
+				camera.CFrame = garage
+			end
+			return
+		end
+
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local seated = humanoid ~= nil and humanoid.SeatPart ~= nil
