@@ -36,8 +36,8 @@ Solo time trial. Each player gets their own `RaceService` session.
 ## Status
 
 - [x] [v2.0 Shared race](01-shared-race.md) — solo Play verified; two-client Start Server still a manual check
-- [ ] [v2.1 Credits](02-credits.md)
-- [ ] [v2.2 Marketplace](03-marketplace.md)
+- [x] [v2.1 Credits](02-credits.md) — solo Play verified (stipend +50, 1st +150, next round 250)
+- [x] [v2.2 Marketplace](03-marketplace.md) — solo Play verified (buy/hold, shop closed after green)
 - [ ] [v2.3 Pickups](04-pickups.md)
 - [ ] [v2.4 Track plaza](05-track-plaza.md)
 

@@ -11,6 +11,7 @@ local GRAVITY = 168
 local MAX_LAUNCH = 52
 local LAND_BOUNCE = 0.26
 local BOUNCE_MIN = 22
+local REVERSE_MAX = Constants.Car.MaxSpeed * 0.55
 
 export type State = {
 	speed: number,
@@ -161,21 +162,26 @@ local function bounceMove(
 		end
 	end
 
-	local step = math.min(speed * dt, Constants.Car.MaxSpeed * dt + MAX_STEP_SLACK)
-	local movement = flatLook * step
+	local maxStep = Constants.Car.MaxSpeed * dt + MAX_STEP_SLACK
+	local signedStep = speed * dt
+	if math.abs(signedStep) > maxStep then
+		signedStep = math.sign(signedStep) * maxStep
+	end
+	local movement = flatLook * signedStep
 	local startCf = CFrame.lookAt(startPos, startPos + flatLook)
 	local pos = startPos + movement
 	local hit = closestWallHit(startCf, body, movement, ray)
 	if hit then
 		local n = inwardNormal(startPos, hit.Position, hit.Normal)
-		local travel = math.max(0, hit.Distance - WALL_SKIN)
-		pos = startPos + movement.Unit * travel + n * WALL_SKIN
-		local vel = reflectVelocity(flatLook * speed, n)
-		speed = math.clamp(vel.Magnitude, 0, Constants.Car.MaxSpeed)
-		if speed > 1 then
-			flatLook = vel.Unit
+		if movement.Magnitude > 0.001 then
+			local travel = math.max(0, hit.Distance - WALL_SKIN)
+			pos = startPos + movement.Unit * travel + n * WALL_SKIN
 		else
-			flatLook = n
+			pos = startPos + n * WALL_SKIN
+		end
+		local vel = reflectVelocity(flatLook * speed, n)
+		speed = math.clamp(vel:Dot(flatLook), -REVERSE_MAX, Constants.Car.MaxSpeed)
+		if math.abs(speed) <= 1 then
 			speed = 0
 		end
 	end
@@ -197,7 +203,7 @@ local function bounceMove(
 	end
 
 	local delta = flatten(pos - startPos)
-	local maxMove = step + WALL_SKIN + 0.5
+	local maxMove = math.abs(signedStep) + WALL_SKIN + 0.5
 	if delta.Magnitude > maxMove then
 		pos = startPos + delta.Unit * maxMove
 	end
@@ -243,11 +249,28 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	end
 	dt = math.clamp(dt, 1 / 240, 1 / 30)
 
-	local accel = if throttle < 0 then Constants.Car.Brake else Constants.Car.Acceleration
-	local speed = math.clamp(state.speed + throttle * accel * dt, 0, Constants.Car.MaxSpeed)
-	if math.abs(throttle) < 0.05 then
-		speed = math.max(0, speed - Constants.Car.Brake * 0.45 * dt)
+	local speed = state.speed
+	if throttle > 0.05 then
+		if speed < 0 then
+			speed += Constants.Car.Brake * dt
+		else
+			speed += Constants.Car.Acceleration * dt
+		end
+	elseif throttle < -0.05 then
+		if speed > 0 then
+			speed -= Constants.Car.Brake * dt
+		else
+			speed -= Constants.Car.Acceleration * dt
+		end
+	else
+		local coast = Constants.Car.Brake * 0.45 * dt
+		if speed > 0 then
+			speed = math.max(0, speed - coast)
+		elseif speed < 0 then
+			speed = math.min(0, speed + coast)
+		end
 	end
+	speed = math.clamp(speed, -REVERSE_MAX, Constants.Car.MaxSpeed)
 
 	local look = body.CFrame.LookVector
 	local flatLook = Vector3.new(look.X, 0, look.Z)
@@ -257,7 +280,7 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 		flatLook = flatLook.Unit
 	end
 
-	local yaw = -steer * Constants.Car.TurnSpeed * math.clamp((speed + 10) / 28, 0.4, 1)
+	local yaw = -steer * Constants.Car.TurnSpeed * math.clamp((math.abs(speed) + 10) / 28, 0.4, 1)
 	flatLook = (CFrame.lookAt(Vector3.zero, flatLook) * CFrame.Angles(0, yaw * dt, 0)).LookVector
 	flatLook = Vector3.new(flatLook.X, 0, flatLook.Z)
 	if flatLook.Magnitude < 0.05 then

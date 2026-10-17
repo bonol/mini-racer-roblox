@@ -457,7 +457,7 @@ local function build()
 	CollectionService:AddTag(spawn, Constants.Track.SpawnTag)
 
 	local finish = checkpoint(Constants.Race.CheckpointCount, spawnCFrame, width)
-	finish.Size = Vector3.new(width + 2, 8, 1.6)
+	finish.Size = Vector3.new(width + 2, 16, 12)
 	finish.Transparency = 0.82
 	finish.Parent = model
 

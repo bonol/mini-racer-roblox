@@ -9,6 +9,9 @@ local NAMES = {
 	RequestRestart = "RequestRestart",
 	DriveInput = "DriveInput",
 	SelectKart = "SelectKart",
+	CreditsChanged = "CreditsChanged",
+	BuyItem = "BuyItem",
+	InventoryChanged = "InventoryChanged",
 }
 
 local Remotes = {

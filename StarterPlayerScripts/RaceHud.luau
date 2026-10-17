@@ -18,6 +18,7 @@ function RaceHud.start()
 	gui.Name = "MiniRacerHud"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 50
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local timer = Instance.new("TextLabel")
@@ -55,8 +56,59 @@ function RaceHud.start()
 	standings.Font = Enum.Font.Gotham
 	standings.TextSize = 18
 	standings.TextColor3 = Color3.fromRGB(200, 200, 210)
-	standings.Text = "Lap 1 / 20    P-"
+	standings.Text = "Lap 1 / 3    P-"
 	standings.Parent = gui
+
+	local creditPanel = Instance.new("Frame")
+	creditPanel.Name = "CreditPanel"
+	creditPanel.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
+	creditPanel.BackgroundTransparency = 0.28
+	creditPanel.BorderSizePixel = 0
+	creditPanel.Position = UDim2.fromScale(0.02, 0.03)
+	creditPanel.Size = UDim2.fromOffset(220, 48)
+	creditPanel.Parent = gui
+	local creditCorner = Instance.new("UICorner")
+	creditCorner.CornerRadius = UDim.new(0, 8)
+	creditCorner.Parent = creditPanel
+
+	local credits = Instance.new("TextLabel")
+	credits.Name = "Credits"
+	credits.BackgroundTransparency = 1
+	credits.Position = UDim2.fromOffset(12, 0)
+	credits.Size = UDim2.new(1, -16, 1, 0)
+	credits.Font = Enum.Font.GothamBold
+	credits.TextSize = 22
+	credits.TextXAlignment = Enum.TextXAlignment.Left
+	credits.TextColor3 = Color3.fromRGB(255, 236, 140)
+	credits.TextStrokeTransparency = 0.45
+	credits.Text = "Credits: 0"
+	credits.Parent = creditPanel
+
+	local toast = Instance.new("TextLabel")
+	toast.Name = "CreditToast"
+	toast.BackgroundTransparency = 1
+	toast.Position = UDim2.fromScale(0.02, 0.105)
+	toast.Size = UDim2.fromOffset(320, 24)
+	toast.Font = Enum.Font.Gotham
+	toast.TextSize = 18
+	toast.TextXAlignment = Enum.TextXAlignment.Left
+	toast.TextColor3 = Color3.fromRGB(140, 255, 170)
+	toast.TextStrokeTransparency = 0.5
+	toast.Text = ""
+	toast.Parent = gui
+
+	local bag = Instance.new("TextLabel")
+	bag.Name = "Inventory"
+	bag.BackgroundTransparency = 1
+	bag.Position = UDim2.fromScale(0.02, 0.145)
+	bag.Size = UDim2.fromOffset(360, 22)
+	bag.Font = Enum.Font.Gotham
+	bag.TextSize = 16
+	bag.TextXAlignment = Enum.TextXAlignment.Left
+	bag.TextColor3 = Color3.fromRGB(200, 210, 220)
+	bag.TextStrokeTransparency = 0.55
+	bag.Text = "Booster x0    Landmine x0"
+	bag.Parent = gui
 
 	local hint = Instance.new("TextLabel")
 	hint.Name = "Hint"
@@ -75,12 +127,31 @@ function RaceHud.start()
 		startedAt = nil :: number?,
 		displayElapsed = 0,
 		frozen = true,
-		lapCount = 20,
+		lapCount = 3,
 		lap = 0,
 		place = nil :: number?,
 		checkpointCount = 4,
 		nextCheckpoint = 1,
+		credits = 0,
+		toastUntil = 0,
+		booster = 0,
+		landmine = 0,
 	}
+
+	local function showToast(text: string, ok: boolean)
+		toast.Text = text
+		toast.TextColor3 = if ok then Color3.fromRGB(140, 255, 170) else Color3.fromRGB(255, 150, 150)
+		state.toastUntil = os.clock() + 3
+	end
+
+	local function renderBag()
+		bag.Text = `Booster x{state.booster}    Landmine x{state.landmine}`
+	end
+
+	local function renderCredits(n: number)
+		state.credits = n
+		credits.Text = `Credits: {n}`
+	end
 
 	local function currentLapLabel(): string
 		local lapCount = state.lapCount
@@ -96,6 +167,9 @@ function RaceHud.start()
 		state.lap = payload.lap or 0
 		state.place = payload.place
 		state.nextCheckpoint = payload.nextCheckpoint or 1
+		if typeof(payload.credits) == "number" then
+			renderCredits(payload.credits)
+		end
 		standings.Text = currentLapLabel()
 
 		if payload.state == "Lobby" then
@@ -165,13 +239,71 @@ function RaceHud.start()
 		end
 	end)
 
+	Remotes.get("CheckpointPassed").OnClientEvent:Connect(function(payload)
+		if typeof(payload) ~= "table" then
+			return
+		end
+		if typeof(payload.lap) == "number" then
+			state.lap = payload.lap
+		end
+		if typeof(payload.nextCheckpoint) == "number" then
+			state.nextCheckpoint = payload.nextCheckpoint
+		end
+		if typeof(payload.checkpointCount) == "number" then
+			state.checkpointCount = payload.checkpointCount
+		end
+		standings.Text = currentLapLabel()
+		standings.Visible = true
+	end)
+
 	Remotes.get("RaceFinished").OnClientEvent:Connect(function(payload)
 		if typeof(payload.winnerName) == "string" then
 			status.Text = `{payload.winnerName} wins`
 		end
 	end)
 
+	Remotes.get("CreditsChanged").OnClientEvent:Connect(function(payload)
+		if typeof(payload) ~= "table" then
+			return
+		end
+		if typeof(payload.credits) == "number" then
+			renderCredits(payload.credits)
+		end
+		local delta = payload.delta
+		local reason = payload.reason
+		if typeof(delta) == "number" and delta ~= 0 then
+			local sign = if delta > 0 then "+" else ""
+			local why = if typeof(reason) == "string" then `  {reason}` else ""
+			showToast(`{sign}{delta}{why}`, delta > 0)
+		end
+	end)
+
+	Remotes.get("InventoryChanged").OnClientEvent:Connect(function(payload)
+		if typeof(payload) ~= "table" then
+			return
+		end
+		local inv = payload.inventory
+		if typeof(inv) == "table" then
+			if typeof(inv.Booster) == "number" then
+				state.booster = inv.Booster
+			end
+			if typeof(inv.Landmine) == "number" then
+				state.landmine = inv.Landmine
+			end
+			renderBag()
+		end
+		if typeof(payload.error) == "string" then
+			showToast(payload.error, false)
+		elseif typeof(payload.bought) == "string" then
+			showToast(`bought {payload.bought}`, true)
+		end
+	end)
+
 	RunService.RenderStepped:Connect(function()
+		if state.toastUntil > 0 and os.clock() > state.toastUntil then
+			toast.Text = ""
+			state.toastUntil = 0
+		end
 		if state.frozen or state.phase ~= "Racing" or state.startedAt == nil then
 			return
 		end

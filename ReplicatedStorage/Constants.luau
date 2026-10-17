@@ -1,6 +1,6 @@
 local Constants = {
 	Race = {
-		LapCount = 20,
+		LapCount = 3,
 		CountdownSeconds = 3,
 		CheckpointCount = 4,
 		SelectSeconds = 20,
@@ -25,6 +25,19 @@ local Constants = {
 		RoadWidth = 80,
 		BarrierHeight = 6,
 		WallBounce = 0.58,
+	},
+	Credits = {
+		StartingBalance = 10,
+		Stipend = 20,
+		FinishBonus = 20,
+		Payout = { 150, 90, 50 },
+	},
+	Shop = {
+		OpenStates = { Lobby = true, Selecting = true },
+		Items = {
+			{ Id = "Booster", Name = "Booster", Cost = 80 },
+			{ Id = "Landmine", Name = "Landmine", Cost = 70 },
+		},
 	},
 }
 

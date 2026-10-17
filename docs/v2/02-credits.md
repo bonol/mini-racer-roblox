@@ -1,6 +1,6 @@
 # v2.1 — Credits
 
-**Status:** not started  
+**Status:** implemented (solo Studio Play verified; two-client Start Server still a manual check)  
 **Depends on:** [v2.0 shared race](01-shared-race.md)  
 **Unlocks:** v2.2 marketplace
 

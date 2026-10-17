@@ -6,6 +6,8 @@ local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
 local KartPrototype = require(ReplicatedStorage:WaitForChild("KartPrototype"))
 local TrackService = require(script.Parent:WaitForChild("TrackService"))
 local VehicleService = require(script.Parent:WaitForChild("VehicleService"))
+local CreditService = require(script.Parent:WaitForChild("CreditService"))
+local InventoryService = require(script.Parent:WaitForChild("InventoryService"))
 
 export type MatchState = "Lobby" | "Selecting" | "Countdown" | "Racing" | "Podium"
 
@@ -38,6 +40,18 @@ local match: Match = {
 	lobbyArmed = false,
 	racers = {},
 }
+
+local stipendPaidGen: { [Player]: number } = {}
+local lastDrivePos: { [Player]: Vector3 } = {}
+local PAYOUT_REASONS = { "1st", "2nd", "3rd" }
+
+local function grantRoundStipend(player: Player)
+	if stipendPaidGen[player] == match.gen then
+		return
+	end
+	stipendPaidGen[player] = match.gen
+	CreditService.add(player, Constants.Credits.Stipend, "stipend")
+end
 
 local function newRacer(spectator: boolean): Racer
 	return {
@@ -106,6 +120,24 @@ local function rankedPlayers(): { Player }
 		return ra.nextCheckpoint > rb.nextCheckpoint
 	end)
 	return list
+end
+
+local function payPodium()
+	local paid = 0
+	for _, player in rankedPlayers() do
+		local racer = match.racers[player]
+		if racer and racer.onGrid and racer.finishedAt ~= nil then
+			paid += 1
+			local amount = Constants.Credits.Payout[paid]
+			local reason = PAYOUT_REASONS[paid]
+			if amount and reason then
+				CreditService.add(player, amount, reason)
+			end
+			if paid >= 3 then
+				break
+			end
+		end
+	end
 end
 
 local function allLocked(): boolean
@@ -181,6 +213,7 @@ local function broadcast(extra: { [string]: any }?)
 		payload.paletteId = racer.paletteId
 		payload.spectator = racer.spectator
 		payload.onGrid = racer.onGrid
+		payload.credits = CreditService.get(player)
 		Remotes.get("RaceStateChanged"):FireClient(player, payload)
 	end
 end
@@ -249,6 +282,7 @@ function beginSelecting()
 		match.racers[player] = newRacer(false)
 		VehicleService.despawn(player)
 		VehicleService.freezeForSelect(player)
+		grantRoundStipend(player)
 	end
 	broadcast({ selectRemaining = Constants.Race.SelectSeconds })
 
@@ -309,6 +343,7 @@ function beginCountdown()
 		racer.touching = {}
 		racer.onGrid = true
 		racer.spectator = false
+		lastDrivePos[player] = nil
 		VehicleService.spawnFor(player, paletteId, i, slotCount)
 		VehicleService.setDrivingEnabled(player, false)
 	end
@@ -349,6 +384,7 @@ function enterPodium()
 			VehicleService.setDrivingEnabled(player, false)
 		end
 	end
+	payPodium()
 	broadcast({ podiumRemaining = Constants.Race.PodiumSeconds })
 
 	if match.winner then
@@ -418,6 +454,7 @@ local function tryPassCheckpoint(player: Player, checkpoint: BasePart)
 			racer.nextCheckpoint = Constants.Race.CheckpointCount
 			racer.finishedAt = os.clock()
 			VehicleService.setDrivingEnabled(player, false)
+			CreditService.add(player, Constants.Credits.FinishBonus, "finish")
 			Remotes.get("CheckpointPassed"):FireClient(player, {
 				index = index,
 				nextCheckpoint = racer.nextCheckpoint,
@@ -453,15 +490,30 @@ local function onCheckpointTouched(checkpoint: BasePart, hit: BasePart)
 	end
 end
 
+local function pointInCheckpoint(checkpoint: BasePart, pos: Vector3): boolean
+	local rel = checkpoint.CFrame:PointToObjectSpace(pos)
+	local half = checkpoint.Size * 0.5
+	return math.abs(rel.X) <= half.X and math.abs(rel.Y) <= half.Y + 8 and math.abs(rel.Z) <= half.Z
+end
+
 local function considerCarPosition(player: Player, pos: Vector3)
 	local racer = match.racers[player]
 	if racer == nil then
 		return
 	end
+	local prev = lastDrivePos[player] or pos
+	lastDrivePos[player] = pos
+	local dist = (pos - prev).Magnitude
+	local steps = math.max(1, math.ceil(dist / 2))
 	for _, checkpoint in TrackService.getCheckpoints() do
-		local rel = checkpoint.CFrame:PointToObjectSpace(pos)
-		local half = checkpoint.Size * 0.5
-		if math.abs(rel.X) <= half.X and math.abs(rel.Y) <= half.Y + 4 and math.abs(rel.Z) <= half.Z then
+		local hit = false
+		for s = 1, steps do
+			if pointInCheckpoint(checkpoint, prev:Lerp(pos, s / steps)) then
+				hit = true
+				break
+			end
+		end
+		if hit then
 			tryPassCheckpoint(player, checkpoint)
 		else
 			racer.touching[checkpoint] = nil
@@ -506,16 +558,21 @@ function MatchService.addPlayer(player: Player)
 	if not spectator then
 		VehicleService.freezeForSelect(player)
 	end
+	CreditService.sync(player)
+	InventoryService.sync(player)
 	broadcast()
 	if match.state == "Lobby" then
 		maybeStartLobbyTimer()
 	elseif match.state == "Selecting" then
+		grantRoundStipend(player)
 		broadcast({ selectRemaining = Constants.Race.SelectSeconds })
 	end
 end
 
 function MatchService.removePlayer(player: Player)
 	match.racers[player] = nil
+	stipendPaidGen[player] = nil
+	lastDrivePos[player] = nil
 	VehicleService.despawn(player)
 	if match.winner == player then
 		match.winner = nil
