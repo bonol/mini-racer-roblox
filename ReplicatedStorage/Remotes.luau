@@ -12,6 +12,8 @@ local NAMES = {
 	CreditsChanged = "CreditsChanged",
 	BuyItem = "BuyItem",
 	InventoryChanged = "InventoryChanged",
+	UseItem = "UseItem",
+	ItemStateChanged = "ItemStateChanged",
 }
 
 local Remotes = {

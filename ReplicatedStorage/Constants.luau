@@ -39,6 +39,14 @@ local Constants = {
 			{ Id = "Landmine", Name = "Landmine", Cost = 70 },
 		},
 	},
+	Items = {
+		BoostMul = 1.5,
+		BoostSeconds = 3,
+		SlowMul = 0.7,
+		SlowSeconds = 5,
+		MineArmSeconds = 0.6,
+		PickupRespawnSeconds = 10,
+	},
 }
 
 return Constants

@@ -8,6 +8,8 @@ local TrackService = require(script.Parent:WaitForChild("TrackService"))
 local VehicleService = require(script.Parent:WaitForChild("VehicleService"))
 local CreditService = require(script.Parent:WaitForChild("CreditService"))
 local InventoryService = require(script.Parent:WaitForChild("InventoryService"))
+local ItemService = require(script.Parent:WaitForChild("ItemService"))
+local PickupService = require(script.Parent:WaitForChild("PickupService"))
 
 export type MatchState = "Lobby" | "Selecting" | "Countdown" | "Racing" | "Podium"
 
@@ -385,6 +387,7 @@ function enterPodium()
 		end
 	end
 	payPodium()
+	ItemService.clearRound()
 	broadcast({ podiumRemaining = Constants.Race.PodiumSeconds })
 
 	if match.winner then
@@ -519,6 +522,7 @@ local function considerCarPosition(player: Player, pos: Vector3)
 			racer.touching[checkpoint] = nil
 		end
 	end
+	PickupService.consider(player, prev, pos)
 end
 
 function MatchService.chooseKart(player: Player, paletteId: any)
@@ -624,6 +628,11 @@ end
 
 function MatchService.getState(): MatchState
 	return match.state
+end
+
+function MatchService.isRacing(player: Player): boolean
+	local racer = match.racers[player]
+	return match.state == "Racing" and racer ~= nil and racer.onGrid and racer.finishedAt == nil
 end
 
 return MatchService

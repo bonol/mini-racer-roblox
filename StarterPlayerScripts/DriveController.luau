@@ -41,9 +41,20 @@ function DriveController.start()
 	local seatedCar: Model? = nil
 	local replicateAccum = 0
 
-	UserInputService.InputBegan:Connect(function(input)
+	UserInputService.InputBegan:Connect(function(input, processed)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			held[input.KeyCode] = true
+		end
+		if processed or UserInputService:GetFocusedTextBox() ~= nil then
+			return
+		end
+		if not racing then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.E then
+			Remotes.get("UseItem"):FireServer("Booster")
+		elseif input.KeyCode == Enum.KeyCode.Q then
+			Remotes.get("UseItem"):FireServer("Landmine")
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)

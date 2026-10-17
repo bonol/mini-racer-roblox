@@ -110,6 +110,19 @@ function RaceHud.start()
 	bag.Text = "Booster x0    Landmine x0"
 	bag.Parent = gui
 
+	local effect = Instance.new("TextLabel")
+	effect.Name = "ItemEffect"
+	effect.BackgroundTransparency = 1
+	effect.Position = UDim2.fromScale(0.02, 0.175)
+	effect.Size = UDim2.fromOffset(360, 22)
+	effect.Font = Enum.Font.GothamBold
+	effect.TextSize = 16
+	effect.TextXAlignment = Enum.TextXAlignment.Left
+	effect.TextColor3 = Color3.fromRGB(160, 220, 255)
+	effect.TextStrokeTransparency = 0.5
+	effect.Text = ""
+	effect.Parent = gui
+
 	local hint = Instance.new("TextLabel")
 	hint.Name = "Hint"
 	hint.BackgroundTransparency = 1
@@ -136,6 +149,8 @@ function RaceHud.start()
 		toastUntil = 0,
 		booster = 0,
 		landmine = 0,
+		boostRemaining = 0,
+		slowRemaining = 0,
 	}
 
 	local function showToast(text: string, ok: boolean)
@@ -146,6 +161,18 @@ function RaceHud.start()
 
 	local function renderBag()
 		bag.Text = `Booster x{state.booster}    Landmine x{state.landmine}`
+	end
+
+	local function renderEffect()
+		if state.slowRemaining > 0.05 then
+			effect.Text = `Slowed  {string.format("%.1f", state.slowRemaining)}s`
+			effect.TextColor3 = Color3.fromRGB(255, 140, 140)
+		elseif state.boostRemaining > 0.05 then
+			effect.Text = `Boosted  {string.format("%.1f", state.boostRemaining)}s`
+			effect.TextColor3 = Color3.fromRGB(160, 220, 255)
+		else
+			effect.Text = ""
+		end
 	end
 
 	local function renderCredits(n: number)
@@ -204,7 +231,7 @@ function RaceHud.start()
 			timer.Visible = true
 			standings.Visible = true
 			timer.Text = "0:00.00"
-			hint.Text = "WASD / arrows to drive"
+			hint.Text = "WASD drive · E boost · Q mine"
 			if payload.spectator then
 				status.Text = "Waiting for next race"
 			elseif payload.countdown and payload.countdown > 0 then
@@ -220,7 +247,7 @@ function RaceHud.start()
 				status.Text = "Waiting for next race"
 				hint.Text = "You join the next round"
 			else
-				hint.Text = "WASD / arrows to drive"
+				hint.Text = "WASD drive · E boost · Q mine"
 				state.frozen = false
 				state.startedAt = os.clock() - (payload.elapsed or 0)
 				status.Text = "Racing"
@@ -294,16 +321,38 @@ function RaceHud.start()
 		end
 		if typeof(payload.error) == "string" then
 			showToast(payload.error, false)
+		elseif typeof(payload.picked) == "string" then
+			showToast(`picked up {payload.picked}`, true)
 		elseif typeof(payload.bought) == "string" then
 			showToast(`bought {payload.bought}`, true)
 		end
 	end)
 
-	RunService.RenderStepped:Connect(function()
+	Remotes.get("ItemStateChanged").OnClientEvent:Connect(function(payload)
+		if typeof(payload) ~= "table" then
+			return
+		end
+		if typeof(payload.boostRemaining) == "number" then
+			state.boostRemaining = payload.boostRemaining
+		end
+		if typeof(payload.slowRemaining) == "number" then
+			state.slowRemaining = payload.slowRemaining
+		end
+		renderEffect()
+	end)
+
+	RunService.RenderStepped:Connect(function(dt)
 		if state.toastUntil > 0 and os.clock() > state.toastUntil then
 			toast.Text = ""
 			state.toastUntil = 0
 		end
+		if state.boostRemaining > 0 then
+			state.boostRemaining = math.max(0, state.boostRemaining - dt)
+		end
+		if state.slowRemaining > 0 then
+			state.slowRemaining = math.max(0, state.slowRemaining - dt)
+		end
+		renderEffect()
 		if state.frozen or state.phase ~= "Racing" or state.startedAt == nil then
 			return
 		end

@@ -149,7 +149,9 @@ local function bounceMove(
 	character: Model?,
 	flatLook: Vector3,
 	speed: number,
-	dt: number
+	dt: number,
+	maxFwd: number,
+	maxRev: number
 ): (Vector3, Vector3, number)
 	local ray, overlap = excludeParams(model, character)
 	local safe = state.lastSafe
@@ -162,7 +164,7 @@ local function bounceMove(
 		end
 	end
 
-	local maxStep = Constants.Car.MaxSpeed * dt + MAX_STEP_SLACK
+	local maxStep = maxFwd * dt + MAX_STEP_SLACK
 	local signedStep = speed * dt
 	if math.abs(signedStep) > maxStep then
 		signedStep = math.sign(signedStep) * maxStep
@@ -180,7 +182,7 @@ local function bounceMove(
 			pos = startPos + n * WALL_SKIN
 		end
 		local vel = reflectVelocity(flatLook * speed, n)
-		speed = math.clamp(vel:Dot(flatLook), -REVERSE_MAX, Constants.Car.MaxSpeed)
+		speed = math.clamp(vel:Dot(flatLook), -maxRev, maxFwd)
 		if math.abs(speed) <= 1 then
 			speed = 0
 		end
@@ -249,18 +251,25 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	end
 	dt = math.clamp(dt, 1 / 240, 1 / 30)
 
+	local mul = model:GetAttribute("SpeedMul")
+	if typeof(mul) ~= "number" or mul <= 0 then
+		mul = 1
+	end
+	local maxFwd = Constants.Car.MaxSpeed * mul
+	local maxRev = REVERSE_MAX * mul
+
 	local speed = state.speed
 	if throttle > 0.05 then
 		if speed < 0 then
 			speed += Constants.Car.Brake * dt
 		else
-			speed += Constants.Car.Acceleration * dt
+			speed += Constants.Car.Acceleration * mul * dt
 		end
 	elseif throttle < -0.05 then
 		if speed > 0 then
 			speed -= Constants.Car.Brake * dt
 		else
-			speed -= Constants.Car.Acceleration * dt
+			speed -= Constants.Car.Acceleration * mul * dt
 		end
 	else
 		local coast = Constants.Car.Brake * 0.45 * dt
@@ -270,7 +279,7 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 			speed = math.min(0, speed + coast)
 		end
 	end
-	speed = math.clamp(speed, -REVERSE_MAX, Constants.Car.MaxSpeed)
+	speed = math.clamp(speed, -maxRev, maxFwd)
 
 	local look = body.CFrame.LookVector
 	local flatLook = Vector3.new(look.X, 0, look.Z)
@@ -290,7 +299,7 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	flatLook = flatLook.Unit
 
 	local pos
-	pos, flatLook, speed = bounceMove(state, body, model, character, flatLook, speed, dt)
+	pos, flatLook, speed = bounceMove(state, body, model, character, flatLook, speed, dt, maxFwd, maxRev)
 	state.speed = speed
 	model:PivotTo(CFrame.lookAt(pos, pos + flatLook, Vector3.yAxis))
 	zeroVelocities(model)

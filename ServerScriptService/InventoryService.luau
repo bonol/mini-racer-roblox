@@ -40,7 +40,7 @@ function InventoryService.get(player: Player): { [string]: number }
 	return snapshot(player)
 end
 
-function InventoryService.add(player: Player, itemId: string, n: number)
+function InventoryService.add(player: Player, itemId: string, n: number, kind: string?)
 	if not ITEM_IDS[itemId] then
 		return
 	end
@@ -49,7 +49,15 @@ function InventoryService.add(player: Player, itemId: string, n: number)
 	end
 	local bag = bagFor(player)
 	bag[itemId] = math.max(0, (bag[itemId] or 0) + math.floor(n))
-	fire(player, { bought = if n > 0 then itemId else nil })
+	local extra = {}
+	if n > 0 then
+		if kind == "pickup" then
+			extra.picked = itemId
+		else
+			extra.bought = itemId
+		end
+	end
+	fire(player, extra)
 end
 
 function InventoryService.tryConsume(player: Player, itemId: string): boolean

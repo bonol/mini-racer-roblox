@@ -1,6 +1,6 @@
 # v2.3 — Checkpoint pickups + using items
 
-**Status:** not started  
+**Status:** implemented (solo Studio Play verified; two-client mine-on-B still a manual check)  
 **Depends on:** [v2.2 marketplace](03-marketplace.md)  
 **Unlocks:** v2.4 track plaza (independent visually; this phase is gameplay)
 

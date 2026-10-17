@@ -208,6 +208,7 @@ function VehicleService.spawnFor(player: Player, paletteId: string?, slotIndex: 
 	cars[player] = model
 	canDrive[player] = false
 	model:SetAttribute("CanDrive", false)
+	model:SetAttribute("SpeedMul", 1)
 	bindCar(player, model)
 	ensureDriveLoop()
 
