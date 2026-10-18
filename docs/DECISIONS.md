@@ -15,6 +15,30 @@ Supersedes: … (or none)
 
 ---
 
+## 2026-10-18 — Start castle is a full gatehouse
+
+Decided: The S/F castle is a **deep gatehouse**, not two posts. Four round towers, wing turrets and curtain walls, a keep with a central spire and gold clock, conical purple roofs, merlons, gold bands. Drive-through clearance stays **32**. Same circuit.
+
+Why: The first castle gate read as a thin doorway. Testers asked for more detail and a bigger starting-line castle.
+
+Supersedes: 2026-10-18 Classic dress is a castle gate, not a billboard (two square towers + a slab)
+
+## 2026-10-18 — Classic dress is a castle gate, not a billboard
+
+Decided: The start/finish is a **3D castle gate** the kart drives through (stone towers, purple roofs, merlons, gold portcullis, clearance 32). Finish art is a tapestry on the gatehouse, not a solid 90-stud poster. All six sponsor boards, the two extra finish boards, and barrier chevrons use the same cream / purple / gold castle palette. `SponsorFrame` is gold. Kerbs stay red/white so the racing line still reads. Ground checker `StartLine` is unchanged. Still Classic dress on the same circuit — not a new course.
+
+Why: Testers wanted to feel like they were driving into a castle, and the rest of the boards still looked like a blue race meeting.
+
+Supersedes: 2026-10-18 Classic S/F banner is castle palette (flat gantry + racing-blue sponsors)
+
+## 2026-10-18 — Classic S/F banner is castle palette
+
+Decided: The start/finish gantry (and its two trackside copies) uses original castle-themed art: cream stone, purple roofs, gold trim, purple/cream checkers, **MINI RACER START/FINISH**. Gantry posts (`Arch`) are gold `210, 162, 58`. The ground checker `StartLine` is unchanged. This is still Classic dress, not a second theme or a new circuit.
+
+Why: The starting-line banner should read castle, not racing-blue flags, while the racing line stays the same.
+
+Supersedes: Classic `finish-banner.png` racing-blue chevron art; `Arch` racing blue
+
 ## 2026-10-18 — Classic banners 3× taller, 6× longer, three times around the lap
 
 Decided: Trackside boards are **168 × 30** (was 28 × 10). Each of the six sponsor arts appears **3** times around the circuit. Finish/start art appears **3** times: one taller S/F gantry (banner height 90) plus two trackside copies. Same PNGs; chevrons still unplaced.

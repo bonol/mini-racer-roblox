@@ -46,24 +46,25 @@ value into the matching `Classic` entry in `TrackThemes.luau`:
 
 | Theme field | Source PNG | Asset ID |
 | --- | --- | --- |
-| `Images.Barrier` | `barrier-panel.png` | `rbxassetid://117460574970310` |
+| `Images.Barrier` | `barrier-panel.png` | `rbxassetid://118110440386002` |
 | `Images.StartLine` | `start-line.png` | `rbxassetid://73625917521760` |
-| `Images.FinishBanner` | `finish-banner.png` | `rbxassetid://107126072271958` |
+| `Images.FinishBanner` | `finish-banner.png` | `rbxassetid://122615315404933` |
 | `Images.ChevronLeft` | `chevron-left.png` | `rbxassetid://89191748334118` |
 | `Images.ChevronRight` | `chevron-right.png` | `rbxassetid://111291036653365` |
 | `Images.ChevronHairpin` | `chevron-hairpin.png` | `rbxassetid://99458837081193` |
-| `Sponsors.MiniRacerCup` | `sponsor-mini-racer-cup.png` | `rbxassetid://126578249905531` |
-| `Sponsors.KoalaRacing` | `sponsor-koala-racing.png` | `rbxassetid://135627531796174` |
-| `Sponsors.BoltBoost` | `sponsor-bolt-boost.png` | `rbxassetid://114325621648969` |
-| `Sponsors.TurboTires` | `sponsor-turbo-tires.png` | `rbxassetid://111188679120247` |
-| `Sponsors.PlazaPitstop` | `sponsor-plaza-pitstop.png` | `rbxassetid://119457440551458` |
-| `Sponsors.BombBox` | `sponsor-bomb-box.png` | `rbxassetid://105303519594270` |
+| `Sponsors.MiniRacerCup` | `sponsor-mini-racer-cup.png` | `rbxassetid://140695092815748` |
+| `Sponsors.KoalaRacing` | `sponsor-koala-racing.png` | `rbxassetid://85395568055054` |
+| `Sponsors.BoltBoost` | `sponsor-bolt-boost.png` | `rbxassetid://79798610330221` |
+| `Sponsors.TurboTires` | `sponsor-turbo-tires.png` | `rbxassetid://104021789006578` |
+| `Sponsors.PlazaPitstop` | `sponsor-plaza-pitstop.png` | `rbxassetid://76845063427534` |
+| `Sponsors.BombBox` | `sponsor-bomb-box.png` | `rbxassetid://140586940348473` |
 
 The procedural track creates image slots on inward-facing barriers, the
-start stripe, a tall S/F gantry, two extra finish boards, and each of the
-six sponsor arts **three times** around the lap. Trackside boards are
-**168 × 30** (6× longer, 3× taller than the first Classic test). The
-gantry banner is **90** studs high. Chevrons still need corner placement.
+start stripe, a deep S/F **castle gatehouse** (four towers, wing turrets, keep
+and spire, tapestries), two extra finish boards, and each of the six sponsor
+arts **three times** around the lap. Trackside boards are **168 × 30** with
+gold frames. Gate clearance is **32** studs. Chevrons still need corner
+placement.
 
 Boards do not collide with cars. Until a second theme is added, Classic
 art appears every round.

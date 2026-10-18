@@ -12,6 +12,12 @@ Play: Playtesters | other Studio | skipped (MCP down) — one-line evidence
 
 ---
 
+## 2026-10-18 — Replace the Classic start gantry with a castle gatehouse
+
+What: Classic S/F is a drive-through castle gatehouse (towers, keep, tapestries). Sponsor boards, extra finish boards, and barrier art use the same cream / purple / gold dress.
+
+Play: Playtesters (`98798376352087`) — MiniRacerTrack rebuilt with 845 road planks, castle ThemeDecor, gold-framed boards; Play seated on grid and drove through the gate.
+
 ## 2026-10-18 — Dress Classic banners and keep Space from ejecting the racer
 
 What: Classic theme IDs on the generated track; trackside boards 168×30, each sponsor ×3, tall S/F gantry. Space no longer jumps the racer out of the race kart (car stayed, no start teleport).

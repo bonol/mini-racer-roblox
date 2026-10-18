@@ -392,8 +392,161 @@ local SPONSOR_IDS = {
 local BANNER_COPIES = 3
 local BOARD_LENGTH = 28 * 6
 local BOARD_HEIGHT = 10 * 3
-local ARCH_BANNER_HEIGHT = 30 * 3
-local ARCH_POST_HEIGHT = 42 * 3
+
+local STONE = Color3.fromRGB(214, 190, 148)
+local STONE_DARK = Color3.fromRGB(156, 134, 106)
+local ROOF = Color3.fromRGB(118, 52, 138)
+local GOLD = Color3.fromRGB(210, 162, 58)
+local WINDOW = Color3.fromRGB(48, 36, 72)
+
+local GATE_CLEARANCE = 32
+local TOWER_H = 108
+local TOWER_D = 20
+local ROOF_H = 36
+local LINTEL_H = 36
+local LINTEL_D = 32
+local WING_H = 52
+local WING_TURRET_H = 74
+local SPIRE_H = 38
+
+local function decorPart(props: { [string]: any }, role: string): Part
+	props.CanCollide = false
+	props.CanQuery = false
+	if props.Material == nil then
+		props.Material = Enum.Material.Slate
+	end
+	local instance = part(props)
+	instance:SetAttribute("ThemeColorRole", role)
+	return instance
+end
+
+local function uprightCylinder(
+	parent: Instance,
+	name: string,
+	diameter: number,
+	height: number,
+	at: CFrame,
+	color: Color3,
+	role: string,
+	material: Enum.Material?
+): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Shape = Enum.PartType.Cylinder
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.Material = material or Enum.Material.Slate
+	p.Color = color
+	p.Size = Vector3.new(height, diameter, diameter)
+	p.CFrame = at * CFrame.Angles(0, 0, math.pi * 0.5)
+	p:SetAttribute("ThemeColorRole", role)
+	p.Parent = parent
+	return p
+end
+
+local function turretRoof(parent: Instance, at: CFrame, base: number, height: number, withFlag: boolean)
+	local steps = 7
+	local stepH = height / steps
+	for i = 1, steps do
+		local t = (i - 1) / (steps - 1)
+		local d = math.max(base * (1 - t * 0.9), 2)
+		uprightCylinder(
+			parent,
+			"CastleRoof",
+			d,
+			stepH + 0.2,
+			at * CFrame.new(0, stepH * (i - 0.5), 0),
+			ROOF,
+			"CastleRoof",
+			Enum.Material.SmoothPlastic
+		)
+	end
+	decorPart({
+		Name = "CastleFinial",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(2.8, 2.8, 2.8),
+		CFrame = at * CFrame.new(0, height + 1.1, 0),
+		Color = GOLD,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+	if withFlag then
+		decorPart({
+			Name = "CastleFlagPole",
+			Size = Vector3.new(0.45, 12, 0.45),
+			CFrame = at * CFrame.new(0, height + 7, 0),
+			Color = GOLD,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "Arch")
+		decorPart({
+			Name = "CastleFlag",
+			Size = Vector3.new(8, 3.6, 0.28),
+			CFrame = at * CFrame.new(4.1, height + 10, 0),
+			Color = ROOF,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "CastleRoof")
+	end
+end
+
+local function roundTower(
+	parent: Instance,
+	stripe: CFrame,
+	x: number,
+	z: number,
+	yBase: number,
+	height: number,
+	diameter: number,
+	roofH: number,
+	name: string,
+	withFlag: boolean
+)
+	uprightCylinder(
+		parent,
+		name,
+		diameter,
+		height,
+		stripe * CFrame.new(x, yBase + height * 0.5, z),
+		STONE,
+		"CastleStone"
+	)
+	for _, t in { 0.28, 0.62 } do
+		uprightCylinder(
+			parent,
+			"CastleBand",
+			diameter + 1.6,
+			1.6,
+			stripe * CFrame.new(x, yBase + height * t, z),
+			GOLD,
+			"Arch",
+			Enum.Material.SmoothPlastic
+		)
+	end
+	for _, yOff in { yBase + height * 0.22, yBase + height * 0.48, yBase + height * 0.74 } do
+		for _, zOff in { z - diameter * 0.51, z + diameter * 0.51 } do
+			decorPart({
+				Name = "CastleWindow",
+				Size = Vector3.new(4.2, 7.2, 0.7),
+				CFrame = stripe * CFrame.new(x, yOff, zOff),
+				Color = WINDOW,
+				Material = Enum.Material.SmoothPlastic,
+				Parent = parent,
+			}, "CastleWindow")
+			decorPart({
+				Name = "CastleWindowArch",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.new(4.2, 4.2, 0.7),
+				CFrame = stripe * CFrame.new(x, yOff + 3.4, zOff),
+				Color = WINDOW,
+				Material = Enum.Material.SmoothPlastic,
+				Parent = parent,
+			}, "CastleWindow")
+		end
+	end
+	turretRoof(parent, stripe * CFrame.new(x, yBase + height, z), diameter + 6, roofH, withFlag)
+end
 
 local function placeTrackBoard(
 	parent: Instance,
@@ -411,32 +564,174 @@ local function placeTrackBoard(
 	local outward = leftNormal(direction) * side
 	local boardPos = p + outward * (width * 0.5 + 28) + Vector3.new(0, BOARD_HEIGHT * 0.5 + 4, 0)
 	local faceAt = Vector3.new(p.X, boardPos.Y, p.Z)
-	local board = part({
+	local look = CFrame.lookAt(boardPos, faceAt)
+	decorPart({
+		Name = if sponsorId then "SponsorFrame" else "FinishTrackFrame",
+		Size = Vector3.new(BOARD_LENGTH + 2.6, BOARD_HEIGHT + 2.6, 1.1),
+		CFrame = look * CFrame.new(0, 0, 0.7),
+		Color = GOLD,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+	local board = decorPart({
 		Name = if sponsorId then "SponsorBoard" else "FinishTrackBanner",
 		Size = Vector3.new(BOARD_LENGTH, BOARD_HEIGHT, 1.2),
-		CFrame = CFrame.lookAt(boardPos, faceAt),
-		Color = Color3.fromRGB(36, 98, 222),
+		CFrame = look,
+		Color = STONE,
 		Material = Enum.Material.SmoothPlastic,
-		CanCollide = false,
-		CanQuery = false,
 		Parent = parent,
-	})
-	board:SetAttribute("ThemeColorRole", if sponsorId then "SponsorFrame" else "Arch")
+	}, "CastleStone")
 	themeDecal(board, Enum.NormalId.Front, slot, sponsorId)
 	themeDecal(board, Enum.NormalId.Back, slot, sponsorId)
 	for _, xOff in { -BOARD_LENGTH * 0.38, BOARD_LENGTH * 0.38 } do
-		local leg = part({
+		local leg = decorPart({
 			Name = "BannerLeg",
-			Size = Vector3.new(2.2, boardPos.Y - 1, 2.2),
-			CFrame = board.CFrame * CFrame.new(xOff, -boardPos.Y * 0.5 + 0.5, 0),
-			Color = Color3.fromRGB(36, 98, 222),
-			Material = Enum.Material.SmoothPlastic,
-			CanCollide = false,
-			CanQuery = false,
+			Size = Vector3.new(3.2, boardPos.Y - 1, 3.2),
+			CFrame = look * CFrame.new(xOff, -boardPos.Y * 0.5 + 0.5, 0),
+			Color = STONE,
 			Parent = parent,
-		})
-		leg:SetAttribute("ThemeColorRole", board:GetAttribute("ThemeColorRole"))
+		}, "CastleStone")
+		decorPart({
+			Name = "BannerLegCap",
+			Size = Vector3.new(4, 1.4, 4),
+			CFrame = leg.CFrame * CFrame.new(0, (boardPos.Y - 1) * 0.5 + 0.7, 0),
+			Color = GOLD,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "Arch")
 	end
+end
+
+local function merlons(parent: Instance, stripe: CFrame, x0: number, x1: number, y: number, z: number, step: number)
+	local a = math.min(x0, x1)
+	local b = math.max(x0, x1)
+	for x = a, b, math.abs(step) do
+		decorPart({
+			Name = "CastleMerlon",
+			Size = Vector3.new(5, 8, 6),
+			CFrame = stripe * CFrame.new(x, y, z),
+			Color = STONE,
+			Parent = parent,
+		}, "CastleStone")
+	end
+end
+
+local function buildCastleGate(parent: Instance, stripe: CFrame, width: number)
+	local towerX = width * 0.5 + TOWER_D * 0.5 + 4
+	local halfD = LINTEL_D * 0.5
+	local frontZ = -halfD
+	local backZ = halfD
+	local lintelY = GATE_CLEARANCE + LINTEL_H * 0.5
+	local keepH = 24
+	local keepTop = GATE_CLEARANCE + LINTEL_H + keepH
+
+	roundTower(parent, stripe, -towerX, frontZ, 0, TOWER_H, TOWER_D, ROOF_H, "FinishArchPost", true)
+	roundTower(parent, stripe, towerX, frontZ, 0, TOWER_H, TOWER_D, ROOF_H, "CastleTower", true)
+	roundTower(parent, stripe, -towerX, backZ, 0, TOWER_H - 12, TOWER_D, ROOF_H - 6, "CastleTower", false)
+	roundTower(parent, stripe, towerX, backZ, 0, TOWER_H - 12, TOWER_D, ROOF_H - 6, "CastleTower", false)
+
+	for _, side in { -1, 1 } do
+		local wingX = towerX + 28
+		roundTower(parent, stripe, side * wingX, frontZ, 0, WING_TURRET_H, 14, 24, "CastleWingTurret", true)
+		decorPart({
+			Name = "CastleCurtain",
+			Size = Vector3.new(math.abs(wingX - towerX) - 10, WING_H, 9),
+			CFrame = stripe * CFrame.new(side * (towerX + wingX) * 0.5, WING_H * 0.5, frontZ),
+			Color = STONE,
+			Parent = parent,
+		}, "CastleStone")
+		merlons(parent, stripe, side * (towerX + 8), side * (wingX - 8), WING_H + 4, frontZ, side * 9)
+		decorPart({
+			Name = "CastleSideWall",
+			Size = Vector3.new(9, TOWER_H * 0.58, LINTEL_D - 6),
+			CFrame = stripe * CFrame.new(side * towerX, TOWER_H * 0.29, 0),
+			Color = STONE_DARK,
+			Parent = parent,
+		}, "CastleStoneDark")
+		decorPart({
+			Name = "CastleShoulder",
+			Size = Vector3.new(16, 16, LINTEL_D - 4),
+			CFrame = stripe * CFrame.new(side * (width * 0.5 - 5), GATE_CLEARANCE + 8, 0),
+			Color = STONE_DARK,
+			Parent = parent,
+		}, "CastleStoneDark")
+	end
+
+	decorPart({
+		Name = "CastleLintel",
+		Size = Vector3.new(width + 10, LINTEL_H, LINTEL_D),
+		CFrame = stripe * CFrame.new(0, lintelY, 0),
+		Color = STONE,
+		Parent = parent,
+	}, "CastleStone")
+	decorPart({
+		Name = "CastleKeep",
+		Size = Vector3.new(width * 0.5, keepH, LINTEL_D - 8),
+		CFrame = stripe * CFrame.new(0, GATE_CLEARANCE + LINTEL_H + keepH * 0.5, 0),
+		Color = STONE,
+		Parent = parent,
+	}, "CastleStone")
+	roundTower(parent, stripe, 0, 0, keepTop, SPIRE_H, 15, 30, "CastleSpire", true)
+	merlons(parent, stripe, -width * 0.42, width * 0.42, GATE_CLEARANCE + LINTEL_H + 4, frontZ, 10)
+	merlons(parent, stripe, -width * 0.42, width * 0.42, GATE_CLEARANCE + LINTEL_H + 4, backZ, 10)
+
+	-- Gold clock on the keep, facing racers as they approach.
+	decorPart({
+		Name = "CastleClockRing",
+		Size = Vector3.new(12, 12, 1.2),
+		CFrame = stripe * CFrame.new(0, keepTop - 6, frontZ - 4.6),
+		Color = GOLD,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+	decorPart({
+		Name = "CastleClockFace",
+		Size = Vector3.new(9.4, 9.4, 1.3),
+		CFrame = stripe * CFrame.new(0, keepTop - 6, frontZ - 5.1),
+		Color = Color3.fromRGB(236, 220, 180),
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "CastleStone")
+	decorPart({
+		Name = "CastleClockHand",
+		Size = Vector3.new(0.7, 3.4, 0.5),
+		CFrame = stripe * CFrame.new(0, keepTop - 5.2, frontZ - 5.6),
+		Color = GOLD,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+
+	for x = -width * 0.36, width * 0.36, 6 do
+		decorPart({
+			Name = "CastlePortcullis",
+			Size = Vector3.new(0.7, 12, 0.7),
+			CFrame = stripe * CFrame.new(x, GATE_CLEARANCE - 6, frontZ + 1),
+			Color = GOLD,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "Arch")
+	end
+
+	local tapestry = decorPart({
+		Name = "FinishArchBanner",
+		Size = Vector3.new(width - 14, LINTEL_H - 10, 1.4),
+		CFrame = stripe * CFrame.new(0, lintelY - 1, frontZ - 1.2),
+		Color = GOLD,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+	themeDecal(tapestry, Enum.NormalId.Front, "FinishBanner")
+	themeDecal(tapestry, Enum.NormalId.Back, "FinishBanner")
+	local backTapestry = decorPart({
+		Name = "FinishArchBannerBack",
+		Size = Vector3.new(width - 14, LINTEL_H - 10, 1.4),
+		CFrame = stripe * CFrame.new(0, lintelY - 1, backZ + 1.2),
+		Color = GOLD,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+	themeDecal(backTapestry, Enum.NormalId.Front, "FinishBanner")
+	themeDecal(backTapestry, Enum.NormalId.Back, "FinishBanner")
 end
 
 local function buildThemeDecor(model: Model, centerline: { Vector3 }, stripe: CFrame, width: number)
@@ -448,36 +743,9 @@ local function buildThemeDecor(model: Model, centerline: { Vector3 }, stripe: CF
 	decor.Name = "ThemeDecor"
 	decor.Parent = model
 
-	local postOffset = width * 0.5 + 4
-	local postY = ARCH_POST_HEIGHT * 0.5
-	for _, side in { -1, 1 } do
-		local post = part({
-			Name = "FinishArchPost",
-			Size = Vector3.new(3.2, ARCH_POST_HEIGHT, 3.2),
-			CFrame = stripe * CFrame.new(side * postOffset, postY, 0),
-			Color = Color3.fromRGB(36, 98, 222),
-			Material = Enum.Material.SmoothPlastic,
-			CanCollide = false,
-			CanQuery = false,
-			Parent = decor,
-		})
-		post:SetAttribute("ThemeColorRole", "Arch")
-	end
-	local arch = part({
-		Name = "FinishArchBanner",
-		Size = Vector3.new(width + 11, ARCH_BANNER_HEIGHT, 2.2),
-		CFrame = stripe * CFrame.new(0, ARCH_POST_HEIGHT - ARCH_BANNER_HEIGHT * 0.5, 0),
-		Color = Color3.fromRGB(36, 98, 222),
-		Material = Enum.Material.SmoothPlastic,
-		CanCollide = false,
-		CanQuery = false,
-		Parent = decor,
-	})
-	arch:SetAttribute("ThemeColorRole", "Arch")
-	themeDecal(arch, Enum.NormalId.Front, "FinishBanner")
-	themeDecal(arch, Enum.NormalId.Back, "FinishBanner")
+	buildCastleGate(decor, stripe, width)
 
-	-- Finish art also rides the circuit twice more (gantry + 2 = 3). Sponsors × 3.
+	-- Finish tapestries also ride the circuit twice more. Sponsors × 3.
 	local n = #centerline
 	local sponsorCount = #SPONSOR_IDS * BANNER_COPIES
 	for k = 1, sponsorCount do
@@ -658,7 +926,7 @@ local function build()
 		return if i % 2 == 0 then Color3.fromRGB(230, 230, 230) else Color3.fromRGB(200, 40, 40)
 	end
 	local railColor = function(_: number): Color3
-		return Color3.fromRGB(196, 200, 210)
+		return Color3.fromRGB(214, 190, 148)
 	end
 
 	placeStrip(offsetLoop(centerline, half - 1.1), "Kerb", 2.2, 0.35, 1.9, kerbColor, Enum.Material.SmoothPlastic, false, 0.9, model)
