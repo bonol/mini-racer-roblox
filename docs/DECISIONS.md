@@ -15,6 +15,38 @@ Supersedes: … (or none)
 
 ---
 
+## 2026-10-19 — Compact kart picker; plaza after race
+
+Decided: Kart-select cards are **half size** (75×105) in a compact bottom dock so the plaza stays visible. After a race, `enterPodium` despawns grid karts and teleports everyone to the plaza immediately. Shop is open in **Podium / Lobby / Selecting**. `LobbyWaitSeconds = 12` (was 8).
+
+Why: The picker covered the paddock and shop; racers stayed on the circuit through the podium, so they had no time to spend credits before the next grid.
+
+Supersedes: Shop only open in Lobby / Selecting; LobbyWaitSeconds 8
+
+## 2026-10-19 — Bomb hit sting
+
+Decided: Being slowed by a Bomb plays `Constants.Audio.BombHit` = `rbxassetid://133988811001179`. Drop and pickup stings are unchanged.
+
+Why: The previous hit clip was the wrong cue.
+
+Supersedes: 2026-10-18 Keep the seven Toolbox audio IDs (BombHit id only)
+
+## 2026-10-19 — Last lap, boost use, second bed
+
+Decided: Passing S/F to **start the last lap** (server `lap` becomes `LapCount - 1`) plays `LastLap` = `rbxassetid://6370343522`. Using a Booster (E) plays `BoostUse` = `rbxassetid://120495627817675`. Background is a **two-track bed**: existing `Background` plus `Background2` = `rbxassetid://133431699431690`; each round restart (MusicController start, and each return to `Lobby`) picks one at random and keeps it through that round. Intermediate lap crosses still use `Lap`; finish still uses `Winner`.
+
+Why: Last-lap and boost needed their own cues; a second bed so lobby/race music is not the same every round.
+
+Supersedes: 2026-10-18 Bomb drop sting (count only — those ids stay)
+
+## 2026-10-18 — Bomb drop sting
+
+Decided: Dropping a Bomb (UseItem Q, after the server consumes it) plays `Constants.Audio.BombDrop` = `rbxassetid://79335982953739`. Pickup and hit keep their existing stings. This is an eighth Toolbox id, not a swap of the previous seven.
+
+Why: Racers needed a distinct drop cue; pickup and hit already had sounds.
+
+Supersedes: 2026-10-18 Keep the seven Toolbox audio IDs (count only — those seven stay)
+
 ## 2026-10-18 — Start castle is a full gatehouse
 
 Decided: The S/F castle is a **deep gatehouse**, not two posts. Four round towers, wing turrets and curtain walls, a keep with a central spire and gold clock, conical purple roofs, merlons, gold bands. Drive-through clearance stays **32**. Same circuit.

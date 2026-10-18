@@ -31,13 +31,28 @@ end
 
 function MusicController.start()
 	local ids = Constants.Audio
-	local bg = makeSound("MiniRacerBackground", ids.Background, true, BG_VOLUME)
+	local bgTracks = { ids.Background, ids.Background2 }
+	local bg = makeSound("MiniRacerBackground", bgTracks[math.random(1, #bgTracks)], true, BG_VOLUME)
 	local countdown = makeSound("MiniRacerCountdown", ids.Countdown, false, STING_VOLUME)
 	local lap = makeSound("MiniRacerLap", ids.Lap, false, STING_VOLUME)
+	local lastLapSting = makeSound("MiniRacerLastLap", ids.LastLap, false, STING_VOLUME)
 	local boost = makeSound("MiniRacerBoostPickup", ids.BoostPickup, false, STING_VOLUME)
+	local boostUse = makeSound("MiniRacerBoostUse", ids.BoostUse, false, STING_VOLUME)
 	local winner = makeSound("MiniRacerWinner", ids.Winner, false, 0.65)
 	local bombPickup = makeSound("MiniRacerBombPickup", ids.BombPickup, false, STING_VOLUME)
+	local bombDrop = makeSound("MiniRacerBombDrop", ids.BombDrop, false, STING_VOLUME)
 	local bombHit = makeSound("MiniRacerBombHit", ids.BombHit, false, STING_VOLUME)
+
+	local function pickBackground()
+		local chosen = bgTracks[math.random(1, #bgTracks)]
+		if bg.SoundId ~= chosen then
+			bg:Stop()
+			bg.SoundId = chosen
+		end
+		bg.TimePosition = 0
+		bg.Volume = BG_VOLUME
+		bg:Play()
+	end
 
 	local phase = "Lobby"
 	local lastLap = 0
@@ -63,7 +78,18 @@ function MusicController.start()
 			if not bg.IsPlaying then
 				bg:Play()
 			end
-		elseif nextPhase == "Lobby" or nextPhase == "Selecting" then
+		elseif nextPhase == "Lobby" then
+			if phase ~= "Lobby" then
+				pickBackground()
+			else
+				bg.Volume = BG_VOLUME
+				if not bg.IsPlaying then
+					bg:Play()
+				end
+			end
+			winnerPlayed = false
+			lastLap = 0
+		elseif nextPhase == "Selecting" then
 			bg.Volume = BG_VOLUME
 			if not bg.IsPlaying then
 				bg:Play()
@@ -88,8 +114,12 @@ function MusicController.start()
 		if typeof(newLap) ~= "number" then
 			return
 		end
-		if newLap > lastLap and newLap < Constants.Race.LapCount then
-			playSting(lap)
+		if newLap > lastLap then
+			if newLap == Constants.Race.LapCount - 1 then
+				playSting(lastLapSting)
+			elseif newLap < Constants.Race.LapCount then
+				playSting(lap)
+			end
 		end
 		lastLap = newLap
 	end)
@@ -111,6 +141,10 @@ function MusicController.start()
 			playSting(boost)
 		elseif payload.picked == "Bomb" then
 			playSting(bombPickup)
+		elseif payload.used == "Booster" then
+			playSting(boostUse)
+		elseif payload.used == "Bomb" then
+			playSting(bombDrop)
 		end
 	end)
 

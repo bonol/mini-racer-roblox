@@ -297,6 +297,7 @@ function RaceHud.start()
 			else
 				status.Text = "Lobby"
 			end
+			hint.Visible = true
 			hint.Text = "Walk the shop · click a kart · sit before green"
 		elseif payload.state == "Selecting" then
 			state.frozen = true
@@ -304,12 +305,11 @@ function RaceHud.start()
 			timer.Visible = false
 			standings.Visible = false
 			timer.Text = "0:00.00"
+			hint.Visible = false
 			if payload.locked then
 				status.Text = "Waiting for others"
-				hint.Text = "Locked in — wait for the field"
 			else
 				status.Text = "Pick a racer"
-				hint.Text = "Walk the shop · click a kart · sit before green"
 			end
 		elseif payload.state == "Countdown" then
 			state.frozen = true
@@ -317,6 +317,7 @@ function RaceHud.start()
 			timer.Visible = true
 			standings.Visible = true
 			timer.Text = "0:00.00"
+			hint.Visible = true
 			hint.Text = "WASD drive · E boost · Q bomb"
 			if payload.spectator then
 				status.Text = "Waiting for next race"
@@ -328,6 +329,7 @@ function RaceHud.start()
 		elseif payload.state == "Racing" then
 			timer.Visible = true
 			standings.Visible = true
+			hint.Visible = true
 			if payload.spectator then
 				state.frozen = true
 				status.Text = "Waiting for next race"
@@ -348,7 +350,8 @@ function RaceHud.start()
 			end
 			local winner = payload.winnerName or "Someone"
 			status.Text = `{winner} wins`
-			hint.Text = "Next round soon"
+			hint.Visible = true
+			hint.Text = "Walk the shop · spend credits before the next grid"
 		end
 	end)
 

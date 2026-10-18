@@ -69,7 +69,7 @@ function InventoryService.tryConsume(player: Player, itemId: string): boolean
 		return false
 	end
 	bag[itemId] -= 1
-	fire(player)
+	fire(player, { used = itemId })
 	return true
 end
 

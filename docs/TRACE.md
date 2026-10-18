@@ -12,6 +12,12 @@ Play: Playtesters | other Studio | skipped (MCP down) — one-line evidence
 
 ---
 
+## 2026-10-19 — Compact kart picker, plaza after race, extra stings
+
+What: Half-size kart dock; podium despawns to plaza with shop open and 12s lobby wait. Extra Toolbox stings: BombDrop, BombHit swap, LastLap, BoostUse, second background bed.
+
+Play: Playtesters (`98798376352087`) — Selecting cards 75×105 in a 520×124 dock with plaza/shop visible; after finish, on foot at plaza (298, 7, −257), no race kart, bought Bomb (220→210 cr).
+
 ## 2026-10-18 — Replace the Classic start gantry with a castle gatehouse
 
 What: Classic S/F is a drive-through castle gatehouse (towers, keep, tapestries). Sponsor boards, extra finish boards, and barrier art use the same cream / purple / gold dress.

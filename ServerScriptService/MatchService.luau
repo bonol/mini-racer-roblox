@@ -396,6 +396,8 @@ function enterPodium()
 		if racer.onGrid then
 			VehicleService.setDrivingEnabled(player, false)
 		end
+		VehicleService.despawn(player)
+		VehicleService.sendToPlaza(player)
 	end
 	payPodium()
 	ItemService.clearRound()

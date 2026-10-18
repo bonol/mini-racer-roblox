@@ -6,7 +6,7 @@ local Constants = {
 		SelectSeconds = 20,
 		MinPlayers = 1,
 		MaxPlayers = 8,
-		LobbyWaitSeconds = 8,
+		LobbyWaitSeconds = 12,
 		PodiumSeconds = 8,
 		DnfAfterWinnerSeconds = 20,
 	},
@@ -36,7 +36,7 @@ local Constants = {
 		Payout = { 150, 90, 50 },
 	},
 	Shop = {
-		OpenStates = { Lobby = true, Selecting = true },
+		OpenStates = { Lobby = true, Selecting = true, Podium = true },
 		Items = {
 			{ Id = "Booster", Name = "Booster", Cost = 20 },
 			{ Id = "Bomb", Name = "Bomb", Cost = 10 },
@@ -51,11 +51,15 @@ local Constants = {
 	},
 	Audio = {
 		Background = "rbxassetid://104976378455015",
+		Background2 = "rbxassetid://133431699431690",
 		Countdown = "rbxassetid://133467521581745",
 		Lap = "rbxassetid://82669582574373",
+		LastLap = "rbxassetid://6370343522",
 		BoostPickup = "rbxassetid://122016420402975",
+		BoostUse = "rbxassetid://120495627817675",
 		BombPickup = "rbxassetid://93170321014352",
-		BombHit = "rbxassetid://89479472135872",
+		BombDrop = "rbxassetid://79335982953739",
+		BombHit = "rbxassetid://133988811001179",
 		Winner = "rbxassetid://120657237573902",
 	},
 }

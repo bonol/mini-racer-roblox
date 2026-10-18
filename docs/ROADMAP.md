@@ -12,7 +12,7 @@ Phase-by-phase implementation: [v2/00-index.md](v2/00-index.md).
 
 **v2 is playable** with multiple racers. Loop today:
 
-plaza walk → stipend 20 → shop Bomb 10 / Booster 20 → kart select → shared countdown → **3 laps** with pickups, E boost, Q bomb, 30° climbs → podium → next lobby.
+plaza walk → stipend 20 → shop Bomb 10 / Booster 20 → kart select → shared countdown → **3 laps** with pickups, E boost, Q bomb, 30° climbs → podium on plaza (shop open) → lobby wait → next select.
 
 v2 leftover (still this version, not v3 gameplay):
 
@@ -58,7 +58,7 @@ Join server
     → 3 laps (checkpoints + pickups + items)
     → first to LapCount wins
     → top 3 paid
-    → short podium, then next round (credits keep)
+    → podium on the plaza (shop open), lobby wait 12s, then next select (credits keep)
 ```
 
 Pre-race is walkable: **run to the grid**, browse the shop, click a paddock kart. The circuit is for racing, not for hanging out.
@@ -107,14 +107,16 @@ All five phases are **implemented**. Catalogs in `docs/v2/` are historical (they
 
 **Pre-race**
 
-- Everyone can select a kart
-- Shop is only open in `Lobby` / `Selecting`
+- Everyone can select a kart from a compact bottom dock (cards 75×105)
+- Shop is open in `Podium` / `Lobby` / `Selecting`
+- After a race, racers return to the plaza at podium (despawn + teleport) so they can spend credits before the next grid
+- `LobbyWaitSeconds = 12` after MinPlayers, then Selecting
 - If you never sit, you are not on the grid (spectator until next round)
 
 **Studio / audio**
 
 - Play-verify on **Mini Racer [testing]**, PlaceId `98798376352087` (not PlaceId 0 / `.rbxlx`)
-- Keep the seven Toolbox ids in `Constants.Audio`; do not swap for generic packs
+- Keep the Toolbox ids in `Constants.Audio` (11 clips: two backgrounds, LastLap, BoostUse, BombDrop); do not swap for generic packs
 - Do not rewrite the kart / `DriveSim` controller
 
 ---
