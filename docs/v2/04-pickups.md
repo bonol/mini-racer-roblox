@@ -1,6 +1,6 @@
 # v2.3 — Checkpoint pickups + using items
 
-**Status:** implemented (solo Studio Play verified; two-client mine-on-B still a manual check)  
+**Status:** implemented (solo Playtesters; Q is Bomb, no owner immunity — see ROADMAP Rules). Two-client bomb-on-other still open. Historical catalog (still says Landmine).  
 **Depends on:** [v2.2 marketplace](03-marketplace.md)  
 **Unlocks:** v2.4 track plaza (independent visually; this phase is gameplay)
 

@@ -1,8 +1,8 @@
 # v2.4 — Track made for racing
 
-**Status:** implemented (solo Studio Play verified; two-client Start Server still a manual check)  
+**Status:** implemented (solo Playtesters: walk plaza, grid sit, 30° climbs, off-map recover). Two-client and 20-lap north star still open — see [ROADMAP Status](../ROADMAP.md#status). Historical checklist.  
 **Depends on:** [v2.0 shared race](01-shared-race.md) (required). Better **after 2.2–2.3** so the plaza has a shop and the grid is not rebuilt twice.  
-**Unlocks:** v2 north-star loop complete
+**Unlocks:** v2 **build** loop complete (solo). North star (2-client + 20 laps) is still [ROADMAP Status](../ROADMAP.md#status).
 
 ## Playable outcome
 

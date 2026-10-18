@@ -1,49 +1,53 @@
 # v2 implementation index
 
-Build **in order**. Do not start a later phase until the earlier one is playable with two Studio clients (Start / Start Server + Player for 2.0+).
+v2.0 → v2.4 are **implemented** (including multi-racer). `LapCount` is **3**. Next version is [v3 racer experience](../v3/00-index.md). Open leftover: Creator Hub listing.
+
+Product rules and tunables: [../ROADMAP.md](../ROADMAP.md). Phase catalogs below are historical.
 
 ```text
 v2.0 Shared race  →  v2.1 Credits  →  v2.2 Marketplace  →  v2.3 Pickups  →  v2.4 Plaza/track
 ```
 
-Product rules and tunables: [../ROADMAP.md](../ROADMAP.md).
+## Current code
 
-## Current code (v1)
+Shared match on `MatchService`. `RaceService.luau` is leftover v1 and is not the session owner.
 
-Solo time trial. Each player gets their own `RaceService` session.
+| Module | Role now |
+| --- | --- |
+| `ServerScriptService/MatchService.luau` | Shared `Lobby → Selecting → Countdown → Racing → Podium` |
+| `ServerScriptService/PlayerService.luau` | Join/leave the match |
+| `ServerScriptService/VehicleService.luau` | Plaza walk, paddock, grid sit |
+| `ServerScriptService/TrackService.luau` | Circuit, plaza, grid, climbs, recover CFrames |
+| `ServerScriptService/CreditService.luau` | Wallet, stipend, payout |
+| `ServerScriptService/InventoryService.luau` | Booster + Bomb counts |
+| `ServerScriptService/MarketService.luau` | Stalls in Lobby/Selecting |
+| `ServerScriptService/ItemService.luau` | E boost, Q bomb, slow |
+| `ServerScriptService/PickupService.luau` | One pad per checkpoint |
+| `ReplicatedStorage/DriveSim.luau` | Client drive, `SpeedMul`, grade |
+| `StarterPlayerScripts/KartSelect.luau` | Shared 20s; wait for the field |
+| `StarterPlayerScripts/RaceHud.luau` | Lap, place, credits, bag, SPD |
+| `StarterPlayerScripts/MusicController.luau` | Toolbox stings |
 
-| Module | Role now | v2 pressure |
-| --- | --- | --- |
-| `ServerScriptService/RaceService.luau` | Per-player `Idle → Selecting → Countdown → Racing → Finished`; finish on checkpoint 4 | Must become a **shared match** + 20 laps |
-| `ServerScriptService/PlayerService.luau` | `CharacterAdded` / **R** calls `RaceService.start(player)` | Join match instead of starting a private race |
-| `ServerScriptService/VehicleService.luau` | One kart at `getSpawnCFrame()`; freeze walk during select | Grid slots; later plaza walking |
-| `ServerScriptService/TrackService.luau` | One spawn stripe, 4 checkpoints | Grid, plaza, pickup pads |
-| `ReplicatedStorage/DriveSim.luau` | Client drive, `MaxSpeed` cap | Speed multiplier (2.2+) |
-| `StarterPlayerScripts/KartSelect.luau` | 20s pick, then **that player** counts down | Shared 20s; wait for the field |
-| `StarterPlayerScripts/RaceHud.luau` | Timer + “time trial” | Lap, place, credits, items |
+`Constants.Race.LapCount` is **3** (testing). North star is 20. `RequestRestart` only from Podium.
 
-`Constants.Race.LapCount` is `1`. `RequestRestart` restarts **that player** immediately.
+## Ground rules
 
-## Ground rules for every phase
-
-1. **Server owns the match.** Clients render HUD and predict driving. Credits, laps, items, and wins are server decisions.
+1. **Server owns the match.** Clients render HUD and predict driving.
 2. **Do not rewrite `KartPrototype`.** Attachments are modifiers on the existing kart.
-3. **Keep CollectionService tags** (`Checkpoint`, `RaceSpawn`). Add new tags; do not break the old ones.
-4. **Script Sync names stay** `Bootstrap.server.luau` / `Bootstrap.client.luau` (no `init.server.luau`).
-5. **One phase = one playable loop.** Leave later features as stubs (`inventory = {}`) only when the phase plan says so.
-6. After each phase, update this index checkbox and the phase doc’s status line.
+3. **Keep CollectionService tags** (`Checkpoint`, `RaceSpawn`).
+4. **Script Sync names stay** `Bootstrap.server.luau` / `Bootstrap.client.luau`.
+5. After a product call, update [DECISIONS.md](../DECISIONS.md) and ROADMAP Rules — not these historical catalogs.
 
 ## Status
 
-- [x] [v2.0 Shared race](01-shared-race.md) — solo Play verified; two-client Start Server still a manual check
-- [x] [v2.1 Credits](02-credits.md) — solo Play verified (stipend +50, 1st +150, next round 250)
-- [x] [v2.2 Marketplace](03-marketplace.md) — solo Play verified (buy/hold, shop closed after green)
-- [x] [v2.3 Pickups](04-pickups.md) — solo Play verified (pad collect, E boost 1.5×, Q mine self-immune); two-client mine hit still a manual check
-- [x] [v2.4 Track plaza](05-track-plaza.md) — solo Play verified (walk plaza, shop reject, countdown sit on grid, off-map recover); two-client Start Server still a manual check
+- [x] [v2.0 Shared race](01-shared-race.md) — solo Playtesters
+- [x] [v2.1 Credits](02-credits.md) — solo (stipend 20, start 10, 1st 150)
+- [x] [v2.2 Marketplace](03-marketplace.md) — solo (Bomb 10 / Booster 20, shop closed after green)
+- [x] [v2.3 Pickups](04-pickups.md) — solo (pad collect, E boost 1.5×, Q bomb, no owner immunity)
+- [x] [v2.4 Track plaza](05-track-plaza.md) — solo (walk plaza, grid sit, climbs, off-map recover)
 
-## Suggested Studio flow
+Open leftover (v2 packaging, not v3):
 
-1. Implement the phase on disk (and Script Sync / Studio MCP).
-2. Play Solo: still works with 1 racer (min players = 1 in Studio).
-3. Play Start Server + 2 Players: shared countdown, both see the same lap/place.
-4. Only then open the next phase doc.
+- [ ] Upload `assets/storefront/` to Creator Hub (listing still blank)
+
+Deferred: 20 laps. Next: [v3/00-index.md](../v3/00-index.md).

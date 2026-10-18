@@ -1,6 +1,6 @@
 # v2.0 — Shared race
 
-**Status:** implemented (solo Studio Play verified)  
+**Status:** implemented (solo Playtesters). Two-client Start Server still open — see [ROADMAP Status](../ROADMAP.md#status). Historical catalog (this doc still says 20 laps).  
 **Depends on:** v1 time trial (done)  
 **Unlocks:** v2.1 credits
 

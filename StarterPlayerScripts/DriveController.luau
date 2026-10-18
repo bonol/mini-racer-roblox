@@ -41,6 +41,14 @@ function DriveController.start()
 	local seatedCar: Model? = nil
 	local replicateAccum = 0
 
+	UserInputService.JumpRequest:Connect(function()
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.SeatPart then
+			humanoid.Jump = false
+		end
+	end)
+
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			held[input.KeyCode] = true
@@ -90,6 +98,11 @@ function DriveController.start()
 			end
 			return
 		end
+
+		humanoid.Jump = false
+		humanoid.JumpPower = 0
+		humanoid.JumpHeight = 0
+		humanoid.AutoJumpEnabled = false
 
 		if seatedCar ~= car then
 			seatedCar = car

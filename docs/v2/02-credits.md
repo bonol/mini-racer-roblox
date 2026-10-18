@@ -1,6 +1,6 @@
 # v2.1 — Credits
 
-**Status:** implemented (solo Studio Play verified; two-client Start Server still a manual check)  
+**Status:** implemented (solo Playtesters; stipend is now 20, not 50 — see ROADMAP Rules). Two-client still open. Historical catalog.  
 **Depends on:** [v2.0 shared race](01-shared-race.md)  
 **Unlocks:** v2.2 marketplace
 

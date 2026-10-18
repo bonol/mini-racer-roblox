@@ -284,6 +284,31 @@ local function part(props: { [string]: any }): Part
 	return instance
 end
 
+local function themeDecal(host: BasePart, face: Enum.NormalId, slot: string, sponsorId: string?)
+	local decal = Instance.new("Decal")
+	decal.Name = slot .. "Art"
+	decal.Face = face
+	decal.Transparency = 1
+	decal:SetAttribute("ThemeImageSlot", slot)
+	if sponsorId then
+		decal:SetAttribute("SponsorId", sponsorId)
+	end
+	decal.Parent = host
+	CollectionService:AddTag(decal, "MiniRacerThemeImage")
+end
+
+local function themeTexture(host: BasePart, face: Enum.NormalId, slot: string, tileU: number, tileV: number)
+	local texture = Instance.new("Texture")
+	texture.Name = slot .. "Art"
+	texture.Face = face
+	texture.StudsPerTileU = tileU
+	texture.StudsPerTileV = tileV
+	texture.Transparency = 1
+	texture:SetAttribute("ThemeImageSlot", slot)
+	texture.Parent = host
+	CollectionService:AddTag(texture, "MiniRacerThemeImage")
+end
+
 -- Constant-width offset of a closed centerline. Miters joints so rails stay continuous.
 local function offsetLoop(centerline: { Vector3 }, dist: number): { Vector3 }
 	local pts = {}
@@ -320,7 +345,8 @@ local function placeStrip(
 	material: Enum.Material,
 	canCollide: boolean,
 	extra: number,
-	parent: Instance
+	parent: Instance,
+	imageFace: Enum.NormalId?
 )
 	local created = 0
 	for i = 1, #points do
@@ -334,7 +360,7 @@ local function placeStrip(
 			continue
 		end
 		local mid = Vector3.new((a.X + b.X) * 0.5, (yA + yB) * 0.5, (a.Z + b.Z) * 0.5)
-		part({
+		local segment = part({
 			Name = name,
 			Size = Vector3.new(sizeX, sizeY, len + extra),
 			CFrame = CFrame.lookAt(mid, Vector3.new(b.X, yB, b.Z)),
@@ -343,10 +369,126 @@ local function placeStrip(
 			CanCollide = canCollide,
 			Parent = parent,
 		})
+		segment:SetAttribute("ThemeIndex", i)
+		if imageFace then
+			themeTexture(segment, imageFace, "Barrier", 15, 6)
+		end
 		created += 1
 		if created % 40 == 0 then
 			task.wait()
 		end
+	end
+end
+
+local SPONSOR_IDS = {
+	"MiniRacerCup",
+	"KoalaRacing",
+	"BoltBoost",
+	"TurboTires",
+	"PlazaPitstop",
+	"BombBox",
+}
+
+local BANNER_COPIES = 3
+local BOARD_LENGTH = 28 * 6
+local BOARD_HEIGHT = 10 * 3
+local ARCH_BANNER_HEIGHT = 30 * 3
+local ARCH_POST_HEIGHT = 42 * 3
+
+local function placeTrackBoard(
+	parent: Instance,
+	centerline: { Vector3 },
+	width: number,
+	index: number,
+	side: number,
+	slot: string,
+	sponsorId: string?
+)
+	local n = #centerline
+	local idx = ((index - 1) % n) + 1
+	local p = centerline[idx]
+	local direction = heading(p, wrap(centerline, idx + 1))
+	local outward = leftNormal(direction) * side
+	local boardPos = p + outward * (width * 0.5 + 28) + Vector3.new(0, BOARD_HEIGHT * 0.5 + 4, 0)
+	local faceAt = Vector3.new(p.X, boardPos.Y, p.Z)
+	local board = part({
+		Name = if sponsorId then "SponsorBoard" else "FinishTrackBanner",
+		Size = Vector3.new(BOARD_LENGTH, BOARD_HEIGHT, 1.2),
+		CFrame = CFrame.lookAt(boardPos, faceAt),
+		Color = Color3.fromRGB(36, 98, 222),
+		Material = Enum.Material.SmoothPlastic,
+		CanCollide = false,
+		CanQuery = false,
+		Parent = parent,
+	})
+	board:SetAttribute("ThemeColorRole", if sponsorId then "SponsorFrame" else "Arch")
+	themeDecal(board, Enum.NormalId.Front, slot, sponsorId)
+	themeDecal(board, Enum.NormalId.Back, slot, sponsorId)
+	for _, xOff in { -BOARD_LENGTH * 0.38, BOARD_LENGTH * 0.38 } do
+		local leg = part({
+			Name = "BannerLeg",
+			Size = Vector3.new(2.2, boardPos.Y - 1, 2.2),
+			CFrame = board.CFrame * CFrame.new(xOff, -boardPos.Y * 0.5 + 0.5, 0),
+			Color = Color3.fromRGB(36, 98, 222),
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+			CanQuery = false,
+			Parent = parent,
+		})
+		leg:SetAttribute("ThemeColorRole", board:GetAttribute("ThemeColorRole"))
+	end
+end
+
+local function buildThemeDecor(model: Model, centerline: { Vector3 }, stripe: CFrame, width: number)
+	local existing = model:FindFirstChild("ThemeDecor")
+	if existing then
+		existing:Destroy()
+	end
+	local decor = Instance.new("Folder")
+	decor.Name = "ThemeDecor"
+	decor.Parent = model
+
+	local postOffset = width * 0.5 + 4
+	local postY = ARCH_POST_HEIGHT * 0.5
+	for _, side in { -1, 1 } do
+		local post = part({
+			Name = "FinishArchPost",
+			Size = Vector3.new(3.2, ARCH_POST_HEIGHT, 3.2),
+			CFrame = stripe * CFrame.new(side * postOffset, postY, 0),
+			Color = Color3.fromRGB(36, 98, 222),
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+			CanQuery = false,
+			Parent = decor,
+		})
+		post:SetAttribute("ThemeColorRole", "Arch")
+	end
+	local arch = part({
+		Name = "FinishArchBanner",
+		Size = Vector3.new(width + 11, ARCH_BANNER_HEIGHT, 2.2),
+		CFrame = stripe * CFrame.new(0, ARCH_POST_HEIGHT - ARCH_BANNER_HEIGHT * 0.5, 0),
+		Color = Color3.fromRGB(36, 98, 222),
+		Material = Enum.Material.SmoothPlastic,
+		CanCollide = false,
+		CanQuery = false,
+		Parent = decor,
+	})
+	arch:SetAttribute("ThemeColorRole", "Arch")
+	themeDecal(arch, Enum.NormalId.Front, "FinishBanner")
+	themeDecal(arch, Enum.NormalId.Back, "FinishBanner")
+
+	-- Finish art also rides the circuit twice more (gantry + 2 = 3). Sponsors × 3.
+	local n = #centerline
+	local sponsorCount = #SPONSOR_IDS * BANNER_COPIES
+	for k = 1, sponsorCount do
+		local sponsorId = SPONSOR_IDS[((k - 1) % #SPONSOR_IDS) + 1]
+		local idx = math.floor((k - 0.5) / sponsorCount * n) + 1
+		local side = if k % 2 == 0 then -1 else 1
+		placeTrackBoard(decor, centerline, width, idx, side, "Sponsor", sponsorId)
+	end
+	for copy = 1, BANNER_COPIES - 1 do
+		local idx = math.floor(copy / BANNER_COPIES * n) + 1
+		placeTrackBoard(decor, centerline, width, idx, if copy == 1 then 1 else -1, "FinishBanner")
 	end
 end
 
@@ -521,8 +663,8 @@ local function build()
 
 	placeStrip(offsetLoop(centerline, half - 1.1), "Kerb", 2.2, 0.35, 1.9, kerbColor, Enum.Material.SmoothPlastic, false, 0.9, model)
 	placeStrip(offsetLoop(centerline, -(half - 1.1)), "Kerb", 2.2, 0.35, 1.9, kerbColor, Enum.Material.SmoothPlastic, false, 0.9, model)
-	placeStrip(offsetLoop(centerline, half + 1.6), "Barrier", 1.6, railHeight, railHeight / 2 - 0.2, railColor, Enum.Material.Metal, true, 1.35, model)
-	placeStrip(offsetLoop(centerline, -(half + 1.6)), "Barrier", 1.6, railHeight, railHeight / 2 - 0.2, railColor, Enum.Material.Metal, true, 1.35, model)
+	placeStrip(offsetLoop(centerline, half + 1.6), "Barrier", 1.6, railHeight, railHeight / 2 - 0.2, railColor, Enum.Material.Metal, true, 1.35, model, Enum.NormalId.Right)
+	placeStrip(offsetLoop(centerline, -(half + 1.6)), "Barrier", 1.6, railHeight, railHeight / 2 - 0.2, railColor, Enum.Material.Metal, true, 1.35, model, Enum.NormalId.Left)
 
 	local spawn = part({
 		Name = "StartSpawn",
@@ -535,6 +677,8 @@ local function build()
 		Parent = model,
 	})
 	CollectionService:AddTag(spawn, Constants.Track.SpawnTag)
+	themeTexture(spawn, Enum.NormalId.Top, "StartLine", 12, 12)
+	buildThemeDecor(model, centerline, spawnCFrame, width)
 
 	local finish = checkpoint(Constants.Race.CheckpointCount, spawnCFrame, width)
 	finish.Size = Vector3.new(width + 2, 16, 12)
@@ -549,9 +693,37 @@ local function build()
 end
 
 function TrackService.buildIfNeeded()
-	if Workspace:FindFirstChild("MiniRacerTrack") == nil then
+	local existing = Workspace:FindFirstChild("MiniRacerTrack")
+	if existing == nil then
 		build()
 		return
+	end
+	-- Rebuild banners from current TrackService without replacing the course.
+	-- Barrier/start-line textures are only added the first time ThemeDecor appears.
+	if existing:IsA("Model") then
+		local stripe = TrackService.getStripeCFrame()
+		local centerline = sampleCenterline()
+		applyBumps(centerline, stripe)
+		applyCurveClimbs(centerline)
+		local hadDecor = existing:FindFirstChild("ThemeDecor") ~= nil
+		buildThemeDecor(existing, centerline, stripe, Constants.Track.RoadWidth)
+		if not hadDecor then
+			local decorated = 0
+			for _, instance in existing:GetDescendants() do
+				if instance:IsA("BasePart") and instance.Name == "Barrier" then
+					themeTexture(instance, Enum.NormalId.Left, "Barrier", 15, 6)
+					themeTexture(instance, Enum.NormalId.Right, "Barrier", 15, 6)
+					decorated += 1
+					if decorated % 40 == 0 then
+						task.wait()
+					end
+				end
+			end
+			local spawn = existing:FindFirstChild("StartSpawn")
+			if spawn and spawn:IsA("BasePart") then
+				themeTexture(spawn, Enum.NormalId.Top, "StartLine", 12, 12)
+			end
+		end
 	end
 	TrackService.ensurePlaza()
 end

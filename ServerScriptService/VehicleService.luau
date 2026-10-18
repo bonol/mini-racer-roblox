@@ -12,7 +12,6 @@ local VehicleService = {}
 local DEFAULT_WALK_SPEED = 16
 local DEFAULT_JUMP_POWER = 50
 local DEFAULT_JUMP_HEIGHT = 7.2
-local EXIT_OFFSET = 6
 
 local cars: { [Player]: Model } = {}
 local canDrive: { [Player]: boolean } = {}
@@ -35,17 +34,23 @@ local function restoreHumanoid(humanoid: Humanoid)
 	humanoid.JumpPower = DEFAULT_JUMP_POWER
 	humanoid.JumpHeight = DEFAULT_JUMP_HEIGHT
 	humanoid.AutoRotate = true
+	humanoid.AutoJumpEnabled = true
 	humanoid.PlatformStand = false
+	pcall(function()
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+	end)
 end
 
-local function placeBesideCar(character: Model, body: BasePart)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if root == nil or not root:IsA("BasePart") then
-		return
-	end
-	root.CFrame = CFrame.new(body.Position + body.CFrame.RightVector * EXIT_OFFSET + Vector3.new(0, 4, 0))
-	root.AssemblyLinearVelocity = Vector3.zero
-	root.AssemblyAngularVelocity = Vector3.zero
+-- Space is Roblox's seat-eject. Race karts stay occupied until despawn.
+local function lockSeatedHumanoid(humanoid: Humanoid)
+	humanoid.JumpPower = 0
+	humanoid.JumpHeight = 0
+	humanoid.Jump = false
+	humanoid.AutoRotate = false
+	humanoid.AutoJumpEnabled = false
+	pcall(function()
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	end)
 end
 
 local function spawnPaddock()
@@ -121,7 +126,7 @@ local function bindCar(player: Player, model: Model)
 	occupantConns[player] = seat:GetPropertyChangedSignal("Occupant"):Connect(function()
 		local occupant = seat.Occupant
 		if occupant then
-			occupant.AutoRotate = false
+			lockSeatedHumanoid(occupant)
 			if body then
 				setCarAnchored(model, true)
 			end
@@ -130,18 +135,24 @@ local function bindCar(player: Player, model: Model)
 		if body then
 			setCarAnchored(model, true)
 		end
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			restoreHumanoid(humanoid)
-			humanoid.Sit = false
-			pcall(function()
-				humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-			end)
+		if cars[player] ~= model then
+			return
 		end
-		if character and body then
-			placeBesideCar(character, body)
+		-- Accidental eject (Space / jump). Put them back; do not dump them on the road.
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid == nil then
+			return
 		end
+		lockSeatedHumanoid(humanoid)
+		task.defer(function()
+			if cars[player] ~= model or seat.Parent == nil then
+				return
+			end
+			if seat.Occupant == humanoid then
+				return
+			end
+			seat:Sit(humanoid)
+		end)
 	end)
 
 	if prompt and prompt:IsA("ProximityPrompt") then
@@ -153,7 +164,7 @@ local function bindCar(player: Player, model: Model)
 			if humanoid == nil or seat.Occupant ~= nil then
 				return
 			end
-			restoreHumanoid(humanoid)
+			lockSeatedHumanoid(humanoid)
 			seat:Sit(humanoid)
 		end)
 	end
@@ -216,9 +227,9 @@ function VehicleService.spawnFor(player: Player, paletteId: string?, slotIndex: 
 		for _ = 1, 25 do
 			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if humanoid and seat then
+				lockSeatedHumanoid(humanoid)
 				seat:Sit(humanoid)
 				if seat.Occupant == humanoid then
-					humanoid.AutoRotate = false
 					break
 				end
 			end
@@ -248,6 +259,25 @@ function VehicleService.despawn(player: Player)
 		cars[player] = nil
 	end
 	canDrive[player] = nil
+end
+
+function VehicleService.ensureSeated(player: Player)
+	local model = cars[player]
+	if model == nil then
+		return
+	end
+	local seat = model:FindFirstChild("Seat")
+	if seat == nil or not seat:IsA("VehicleSeat") then
+		return
+	end
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid == nil then
+		return
+	end
+	lockSeatedHumanoid(humanoid)
+	if seat.Occupant ~= humanoid then
+		seat:Sit(humanoid)
+	end
 end
 
 function VehicleService.setDrivingEnabled(player: Player, enabled: boolean)

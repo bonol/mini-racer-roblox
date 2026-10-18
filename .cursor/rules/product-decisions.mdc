@@ -1,0 +1,22 @@
+---
+description: Record every product decision in docs/DECISIONS.md and keep ROADMAP Rules current
+alwaysApply: true
+---
+
+# Product decisions
+
+When the user chooses product behavior — prices, item ids, lap count, stipend, climb grade, audio asset ids, Studio place, kart rules, shop open states — record it **in that turn**.
+
+1. Add a new `##` entry at the top of [`docs/DECISIONS.md`](docs/DECISIONS.md) (below the intro):
+
+```markdown
+## YYYY-MM-DD — short title
+Decided: …
+Why: …
+Supersedes: … (or none)
+```
+
+2. If current law changed, patch the **Rules** section of [`docs/ROADMAP.md`](docs/ROADMAP.md) in the same turn so it matches [`ReplicatedStorage/Constants.luau`](ReplicatedStorage/Constants.luau).
+3. Do **not** rewrite [`docs/v2/`](docs/v2/) phase catalogs for a tunable change. Those stay historical; ROADMAP Rules is what is true now.
+
+Skip when the ask is review-only (no edits). Skip pure implementation with no new product call.

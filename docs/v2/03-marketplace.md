@@ -1,6 +1,6 @@
 # v2.2 — Marketplace + loadout
 
-**Status:** implemented (solo Studio Play verified; two-client Start Server still a manual check)  
+**Status:** implemented (solo Playtesters; shop is Bomb 10 / Booster 20 — see ROADMAP Rules). Two-client still open. Historical catalog (still says Landmine 70).  
 **Depends on:** [v2.1 credits](02-credits.md)  
 **Unlocks:** v2.3 (using items on track; 2.2 can grant items but **using** them in race is 2.3 if you want a smaller bite — **this phase includes buy + hold + HUD**. Activation on track is 2.3.)
 

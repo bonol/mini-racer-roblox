@@ -5,6 +5,7 @@ local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
 local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
 local KartPrototype = require(ReplicatedStorage:WaitForChild("KartPrototype"))
 local TrackService = require(script.Parent:WaitForChild("TrackService"))
+local ThemeService = require(script.Parent:WaitForChild("ThemeService"))
 local VehicleService = require(script.Parent:WaitForChild("VehicleService"))
 local CreditService = require(script.Parent:WaitForChild("CreditService"))
 local InventoryService = require(script.Parent:WaitForChild("InventoryService"))
@@ -196,6 +197,7 @@ local function broadcast(extra: { [string]: any }?)
 
 	local shared = extra or {}
 	shared.state = match.state
+	shared.themeId = ThemeService.getCurrentId()
 	shared.lapCount = Constants.Race.LapCount
 	shared.checkpointCount = Constants.Race.CheckpointCount
 	shared.racers = racersPayload
@@ -233,6 +235,7 @@ local maybeStartLobbyTimer
 function enterLobby()
 	match.gen += 1
 	stipendRound += 1
+	ThemeService.nextRound()
 	match.state = "Lobby"
 	match.startedAt = nil
 	match.winner = nil
@@ -593,6 +596,8 @@ function MatchService.addPlayer(player: Player)
 	if existing then
 		if match.state == "Lobby" or match.state == "Selecting" then
 			VehicleService.sendToPlaza(player)
+		elseif VehicleService.getCar(player) then
+			VehicleService.ensureSeated(player)
 		end
 		broadcast()
 		return

@@ -1,0 +1,20 @@
+---
+description: Every git commit must include a docs/TRACE.md entry in the same commit
+alwaysApply: true
+---
+
+# Commit trace
+
+When creating a git commit in this repo, include a [`docs/TRACE.md`](docs/TRACE.md) entry **in that same commit**. Do not commit code without it.
+
+Add a new `##` entry at the top of TRACE (below the intro):
+
+```markdown
+## YYYY-MM-DD — commit subject
+What: one or two lines, high level (not a file list)
+Play: Playtesters | other Studio | skipped (MCP down) — one-line evidence
+```
+
+Keep the git subject as the existing 1–2 sentence **why**. TRACE is the in-repo journal; git log is not enough.
+
+If Play did not run, write `Play: skipped — Studio MCP not connected` (or the real reason). Do not invent playtest evidence.

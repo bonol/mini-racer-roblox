@@ -1,0 +1,16 @@
+---
+description: When Studio MCP is connected, play-verify gameplay changes before calling the work done
+alwaysApply: true
+---
+
+# Studio Play verification
+
+If Roblox Studio MCP is connected (`user-Roblox_Studio`, `list_roblox_studios`), do **not** declare a gameplay, HUD, audio, shop, or track change done until you have **started Play and exercised the changed loop**.
+
+Preferred place: **Mini Racer [testing]**, PlaceId `98798376352087`. If that window is not open, say so. Use another connected Studio only if the user accepts it, or stop.
+
+Disk Luau does not run until those Sources are in **this** DataModel. Stop → Play is not enough by itself. After `TrackService` changes, destroy `Workspace.MiniRacerTrack` so `buildIfNeeded` rebuilds.
+
+Evidence: HUD / workspace facts and/or a screenshot. If MCP is absent, say so and leave Play to the user.
+
+Docs-only, review-only, and git-only work do not need Play.
