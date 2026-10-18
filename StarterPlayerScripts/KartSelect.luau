@@ -35,7 +35,8 @@ function KartSelect.start()
 	local dim = Instance.new("Frame")
 	dim.Name = "Dim"
 	dim.BackgroundColor3 = Color3.fromRGB(6, 10, 18)
-	dim.BackgroundTransparency = 0.42
+	dim.BackgroundTransparency = 1
+	dim.Active = false
 	dim.BorderSizePixel = 0
 	dim.Size = UDim2.fromScale(1, 1)
 	dim.Parent = gui
@@ -58,7 +59,7 @@ function KartSelect.start()
 	subtitle.Position = UDim2.fromScale(0.5, 0.15)
 	subtitle.Size = UDim2.fromOffset(640, 28)
 	subtitle.Font = Enum.Font.Gotham
-	subtitle.Text = "20 seconds to pick  -  Azure starts if you wait"
+	subtitle.Text = "Walk the shop · click a kart · sit before green"
 	subtitle.TextColor3 = Color3.fromRGB(200, 208, 220)
 	subtitle.TextSize = 18
 	subtitle.Parent = gui
@@ -194,7 +195,7 @@ function KartSelect.start()
 				subtitle.Text = "Waiting for others"
 			else
 				chosen = false
-				subtitle.Text = "20 seconds to pick  -  Azure starts if you wait"
+				subtitle.Text = "Walk the shop · click a kart · sit before green"
 			end
 			local remaining = payload.selectRemaining
 			if typeof(remaining) == "number" then

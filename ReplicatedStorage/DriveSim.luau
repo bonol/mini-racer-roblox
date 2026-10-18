@@ -17,6 +17,8 @@ export type State = {
 	speed: number,
 	lastSafe: CFrame?,
 	vy: number,
+	lastMul: number,
+	slowCap: number?,
 }
 
 function DriveSim.newState(at: CFrame?): State
@@ -24,6 +26,8 @@ function DriveSim.newState(at: CFrame?): State
 		speed = 0,
 		lastSafe = at,
 		vy = 0,
+		lastMul = 1,
+		slowCap = nil,
 	}
 end
 
@@ -213,11 +217,16 @@ local function bounceMove(
 	local ground = groundY(model, character, pos)
 	local y = startPos.Y
 	local vy = state.vy
-	if y <= ground + 0.4 then
+	if y <= ground + 1.2 then
 		local rise = ground - y
 		if rise > 0 then
+			local climbRate = rise / math.max(dt, 1 / 240)
 			y = ground
-			vy = math.min(MAX_LAUNCH, math.max(vy, rise / math.max(dt, 1 / 240)))
+			if climbRate <= 80 then
+				vy = 0
+			else
+				vy = math.min(MAX_LAUNCH, math.max(vy, climbRate))
+			end
 		end
 	end
 	vy -= GRAVITY * dt
@@ -255,21 +264,48 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	if typeof(mul) ~= "number" or mul <= 0 then
 		mul = 1
 	end
-	local maxFwd = Constants.Car.MaxSpeed * mul
-	local maxRev = REVERSE_MAX * mul
-
+	local lastMul = state.lastMul or 1
 	local speed = state.speed
+	if mul < lastMul - 0.05 then
+		speed *= Constants.Items.SlowMul
+		state.slowCap = math.abs(speed)
+	elseif mul >= 0.99 then
+		state.slowCap = nil
+	end
+	state.lastMul = mul
+
+	local lookHint = Vector3.new(body.CFrame.LookVector.X, 0, body.CFrame.LookVector.Z)
+	if lookHint.Magnitude < 0.05 then
+		lookHint = Vector3.new(1, 0, 0)
+	else
+		lookHint = lookHint.Unit
+	end
+	local yAhead = groundY(model, character, body.Position + lookHint * 5)
+	local yBehind = groundY(model, character, body.Position - lookHint * 5)
+	local pitch = math.atan2(yAhead - yBehind, 10)
+	local travelClimb = if speed >= 0 then pitch else -pitch
+	local gradeMul = 1
+	if travelClimb > 0.02 then
+		gradeMul = math.clamp(1 - math.sin(travelClimb), Constants.Track.ClimbMinMul, 1)
+	end
+
+	local maxFwd = Constants.Car.MaxSpeed * mul * gradeMul
+	local maxRev = REVERSE_MAX * mul * gradeMul
+	if state.slowCap then
+		maxFwd = math.min(maxFwd, state.slowCap * gradeMul)
+		maxRev = math.min(maxRev, state.slowCap * gradeMul)
+	end
 	if throttle > 0.05 then
 		if speed < 0 then
 			speed += Constants.Car.Brake * dt
 		else
-			speed += Constants.Car.Acceleration * mul * dt
+			speed += Constants.Car.Acceleration * mul * gradeMul * dt
 		end
 	elseif throttle < -0.05 then
 		if speed > 0 then
 			speed -= Constants.Car.Brake * dt
 		else
-			speed -= Constants.Car.Acceleration * mul * dt
+			speed -= Constants.Car.Acceleration * mul * gradeMul * dt
 		end
 	else
 		local coast = Constants.Car.Brake * 0.45 * dt
@@ -294,6 +330,7 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	flatLook = Vector3.new(flatLook.X, 0, flatLook.Z)
 	if flatLook.Magnitude < 0.05 then
 		state.speed = speed
+		model:SetAttribute("HudSpeed", math.abs(speed))
 		return
 	end
 	flatLook = flatLook.Unit
@@ -301,6 +338,7 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	local pos
 	pos, flatLook, speed = bounceMove(state, body, model, character, flatLook, speed, dt, maxFwd, maxRev)
 	state.speed = speed
+	model:SetAttribute("HudSpeed", math.abs(speed))
 	model:PivotTo(CFrame.lookAt(pos, pos + flatLook, Vector3.yAxis))
 	zeroVelocities(model)
 end

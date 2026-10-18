@@ -54,7 +54,7 @@ function DriveController.start()
 		if input.KeyCode == Enum.KeyCode.E then
 			Remotes.get("UseItem"):FireServer("Booster")
 		elseif input.KeyCode == Enum.KeyCode.Q then
-			Remotes.get("UseItem"):FireServer("Landmine")
+			Remotes.get("UseItem"):FireServer("Bomb")
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
@@ -65,6 +65,16 @@ function DriveController.start()
 
 	Remotes.get("RaceStateChanged").OnClientEvent:Connect(function(payload)
 		racing = payload.state == "Racing"
+	end)
+
+	Remotes.get("RecoverCar").OnClientEvent:Connect(function(cf)
+		if typeof(cf) ~= "CFrame" then
+			return
+		end
+		if seatedCar and seatedCar.PrimaryPart then
+			sim = DriveSim.newState(cf)
+			seatedCar:PivotTo(cf)
+		end
 	end)
 
 	-- Integrate before the chase cam so both use the same CFrame this frame.

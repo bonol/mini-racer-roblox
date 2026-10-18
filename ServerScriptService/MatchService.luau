@@ -22,6 +22,7 @@ type Racer = {
 	onGrid: boolean,
 	spectator: boolean,
 	touching: { [BasePart]: boolean },
+	lastRecoverIndex: number,
 }
 
 type Match = {
@@ -43,15 +44,17 @@ local match: Match = {
 	racers = {},
 }
 
-local stipendPaidGen: { [Player]: number } = {}
+local stipendPaidRound: { [Player]: number } = {}
+local stipendRound = 0
 local lastDrivePos: { [Player]: Vector3 } = {}
+local lastRecoverAt: { [Player]: number } = {}
 local PAYOUT_REASONS = { "1st", "2nd", "3rd" }
 
 local function grantRoundStipend(player: Player)
-	if stipendPaidGen[player] == match.gen then
+	if stipendPaidRound[player] == stipendRound then
 		return
 	end
-	stipendPaidGen[player] = match.gen
+	stipendPaidRound[player] = stipendRound
 	CreditService.add(player, Constants.Credits.Stipend, "stipend")
 end
 
@@ -63,6 +66,7 @@ local function newRacer(spectator: boolean): Racer
 		onGrid = false,
 		spectator = spectator,
 		touching = {},
+		lastRecoverIndex = Constants.Race.CheckpointCount,
 	}
 end
 
@@ -228,6 +232,7 @@ local maybeStartLobbyTimer
 
 function enterLobby()
 	match.gen += 1
+	stipendRound += 1
 	match.state = "Lobby"
 	match.startedAt = nil
 	match.winner = nil
@@ -236,7 +241,8 @@ function enterLobby()
 	for player, racer in match.racers do
 		match.racers[player] = newRacer(false)
 		VehicleService.despawn(player)
-		VehicleService.freezeForSelect(player)
+		VehicleService.sendToPlaza(player)
+		grantRoundStipend(player)
 	end
 	broadcast()
 	maybeStartLobbyTimer()
@@ -283,7 +289,7 @@ function beginSelecting()
 		end
 		match.racers[player] = newRacer(false)
 		VehicleService.despawn(player)
-		VehicleService.freezeForSelect(player)
+		VehicleService.sendToPlaza(player)
 		grantRoundStipend(player)
 	end
 	broadcast({ selectRemaining = Constants.Race.SelectSeconds })
@@ -345,7 +351,9 @@ function beginCountdown()
 		racer.touching = {}
 		racer.onGrid = true
 		racer.spectator = false
+		racer.lastRecoverIndex = Constants.Race.CheckpointCount
 		lastDrivePos[player] = nil
+		lastRecoverAt[player] = nil
 		VehicleService.spawnFor(player, paletteId, i, slotCount)
 		VehicleService.setDrivingEnabled(player, false)
 	end
@@ -417,9 +425,21 @@ function enterPodium()
 	end)
 end
 
+local function fireRaceFinished(player: Player)
+	local winnerRacer = match.racers[player]
+	Remotes.get("RaceFinished"):FireAllClients({
+		winnerName = player.Name,
+		winnerUserId = player.UserId,
+		finishTime = if winnerRacer and winnerRacer.finishedAt and match.startedAt
+			then winnerRacer.finishedAt - match.startedAt
+			else 0,
+	})
+end
+
 local function onWinner(player: Player)
 	if match.winner == nil then
 		match.winner = player
+		fireRaceFinished(player)
 	end
 	if allGridFinished() then
 		enterPodium()
@@ -474,6 +494,7 @@ local function tryPassCheckpoint(player: Player, checkpoint: BasePart)
 		racer.nextCheckpoint += 1
 	end
 
+	racer.lastRecoverIndex = index
 	Remotes.get("CheckpointPassed"):FireClient(player, {
 		index = index,
 		nextCheckpoint = racer.nextCheckpoint,
@@ -499,9 +520,32 @@ local function pointInCheckpoint(checkpoint: BasePart, pos: Vector3): boolean
 	return math.abs(rel.X) <= half.X and math.abs(rel.Y) <= half.Y + 8 and math.abs(rel.Z) <= half.Z
 end
 
+local function recoverCar(player: Player)
+	local racer = match.racers[player]
+	if racer == nil or match.state ~= "Racing" or not racer.onGrid or racer.finishedAt ~= nil then
+		return
+	end
+	local now = os.clock()
+	if lastRecoverAt[player] and now - lastRecoverAt[player] < 1.5 then
+		return
+	end
+	lastRecoverAt[player] = now
+	local at = TrackService.getRecoverCFrame(racer.lastRecoverIndex)
+	lastDrivePos[player] = at.Position
+	local car = VehicleService.getCar(player)
+	if car then
+		car:SetAttribute("SpeedMul", car:GetAttribute("SpeedMul") or 1)
+	end
+	Remotes.get("RecoverCar"):FireClient(player, at)
+end
+
 local function considerCarPosition(player: Player, pos: Vector3)
 	local racer = match.racers[player]
 	if racer == nil then
+		return
+	end
+	if match.state == "Racing" and racer.onGrid and racer.finishedAt == nil and TrackService.isOffTrack(pos) then
+		recoverCar(player)
 		return
 	end
 	local prev = lastDrivePos[player] or pos
@@ -548,7 +592,7 @@ function MatchService.addPlayer(player: Player)
 	local existing = match.racers[player]
 	if existing then
 		if match.state == "Lobby" or match.state == "Selecting" then
-			VehicleService.freezeForSelect(player)
+			VehicleService.sendToPlaza(player)
 		end
 		broadcast()
 		return
@@ -560,12 +604,13 @@ function MatchService.addPlayer(player: Player)
 	end
 	match.racers[player] = newRacer(spectator)
 	if not spectator then
-		VehicleService.freezeForSelect(player)
+		VehicleService.sendToPlaza(player)
 	end
 	CreditService.sync(player)
 	InventoryService.sync(player)
 	broadcast()
 	if match.state == "Lobby" then
+		grantRoundStipend(player)
 		maybeStartLobbyTimer()
 	elseif match.state == "Selecting" then
 		grantRoundStipend(player)
@@ -575,8 +620,9 @@ end
 
 function MatchService.removePlayer(player: Player)
 	match.racers[player] = nil
-	stipendPaidGen[player] = nil
+	stipendPaidRound[player] = nil
 	lastDrivePos[player] = nil
+	lastRecoverAt[player] = nil
 	VehicleService.despawn(player)
 	if match.winner == player then
 		match.winner = nil

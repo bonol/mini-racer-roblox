@@ -11,10 +11,8 @@ local function matchService()
 	return require(script.Parent:WaitForChild("MatchService"))
 end
 
-type Mine = {
+type Bomb = {
 	part: BasePart,
-	owner: Player,
-	armedAt: number,
 }
 
 local ItemService = {}
@@ -22,9 +20,9 @@ local ItemService = {}
 local boostUntil: { [Player]: number } = {}
 local slowUntil: { [Player]: number } = {}
 local lastCf: { [Player]: CFrame } = {}
-local mines: { Mine } = {}
+local bombs: { Bomb } = {}
 local started = false
-local mineFolder: Folder? = nil
+local bombFolder: Folder? = nil
 
 local function now(): number
 	return os.clock()
@@ -62,16 +60,20 @@ local function fireState(player: Player)
 	})
 end
 
-local function ensureMineFolder(): Folder
-	local folder = Workspace:FindFirstChild("KartMines")
+local function ensureBombFolder(): Folder
+	local leftover = Workspace:FindFirstChild("KartMines")
+	if leftover then
+		leftover:Destroy()
+	end
+	local folder = Workspace:FindFirstChild("KartBombs")
 	if folder and folder:IsA("Folder") then
-		mineFolder = folder
+		bombFolder = folder
 		return folder
 	end
 	local created = Instance.new("Folder")
-	created.Name = "KartMines"
+	created.Name = "KartBombs"
 	created.Parent = Workspace
-	mineFolder = created
+	bombFolder = created
 	return created
 end
 
@@ -92,12 +94,12 @@ function ItemService.useBooster(player: Player)
 	fireState(player)
 end
 
-function ItemService.dropMine(player: Player)
+function ItemService.dropBomb(player: Player)
 	if not matchService().isRacing(player) then
 		return
 	end
-	if not InventoryService.tryConsume(player, "Landmine") then
-		InventoryService.reject(player, "no landmine")
+	if not InventoryService.tryConsume(player, "Bomb") then
+		InventoryService.reject(player, "no bomb")
 		return
 	end
 	local cf = lastCf[player]
@@ -106,7 +108,7 @@ function ItemService.dropMine(player: Player)
 		cf = car.PrimaryPart.CFrame
 	end
 	if cf == nil then
-		InventoryService.add(player, "Landmine", 1)
+		InventoryService.add(player, "Bomb", 1)
 		return
 	end
 	local look = Vector3.new(cf.LookVector.X, 0, cf.LookVector.Z)
@@ -117,29 +119,52 @@ function ItemService.dropMine(player: Player)
 	end
 	local pos = cf.Position - look * 9
 	local part = Instance.new("Part")
-	part.Name = "Landmine"
-	part.Size = Vector3.new(4.2, 0.7, 4.2)
+	part.Name = "Bomb"
+	part.Shape = Enum.PartType.Ball
+	part.Size = Vector3.new(5.4, 5.4, 5.4)
 	part.Anchored = true
 	part.CanCollide = false
 	part.CanQuery = false
-	part.Material = Enum.Material.SmoothPlastic
-	part.Color = Color3.fromRGB(40, 28, 32)
-	part.CFrame = CFrame.new(pos.X, 1.55, pos.Z)
-	part.Parent = ensureMineFolder()
-	table.insert(mines, {
+	part.CanTouch = false
+	part.Material = Enum.Material.Neon
+	part.Color = Color3.fromRGB(220, 40, 48)
+	part.CFrame = CFrame.new(pos.X, 2.8, pos.Z)
+	part.Parent = ensureBombFolder()
+
+	local light = Instance.new("PointLight")
+	light.Brightness = 4
+	light.Range = 18
+	light.Color = Color3.fromRGB(255, 80, 60)
+	light.Parent = part
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "Label"
+	billboard.Size = UDim2.fromOffset(80, 28)
+	billboard.StudsOffset = Vector3.new(0, 3.4, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Parent = part
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Size = UDim2.fromScale(1, 1)
+	title.Font = Enum.Font.GothamBlack
+	title.TextSize = 18
+	title.TextColor3 = Color3.fromRGB(255, 220, 80)
+	title.TextStrokeTransparency = 0.3
+	title.Text = "BOMB"
+	title.Parent = billboard
+
+	table.insert(bombs, {
 		part = part,
-		owner = player,
-		armedAt = now() + Constants.Items.MineArmSeconds,
 	})
 end
 
 function ItemService.clearRound()
-	for _, mine in mines do
-		if mine.part then
-			mine.part:Destroy()
+	for _, bomb in bombs do
+		if bomb.part then
+			bomb.part:Destroy()
 		end
 	end
-	table.clear(mines)
+	table.clear(bombs)
 	table.clear(boostUntil)
 	table.clear(slowUntil)
 	for player, _ in lastCf do
@@ -153,13 +178,13 @@ function ItemService.start()
 		return
 	end
 	started = true
-	ensureMineFolder()
+	ensureBombFolder()
 
 	Remotes.get("UseItem").OnServerEvent:Connect(function(player, itemId)
 		if itemId == "Booster" then
 			ItemService.useBooster(player)
-		elseif itemId == "Landmine" then
-			ItemService.dropMine(player)
+		elseif itemId == "Bomb" then
+			ItemService.dropBomb(player)
 		end
 	end)
 
@@ -188,26 +213,19 @@ function ItemService.start()
 		end
 
 		local i = 1
-		while i <= #mines do
-			local mine = mines[i]
-			if mine.part == nil or mine.part.Parent == nil then
-				table.remove(mines, i)
-				continue
-			end
-			if clock < mine.armedAt then
-				i += 1
+		while i <= #bombs do
+			local bomb = bombs[i]
+			if bomb.part == nil or bomb.part.Parent == nil then
+				table.remove(bombs, i)
 				continue
 			end
 			local hitPlayer: Player? = nil
 			for player, cf in lastCf do
-				if player == mine.owner then
-					continue
-				end
 				if not matchService().isRacing(player) then
 					continue
 				end
 				local p = cf.Position
-				local m = mine.part.Position
+				local m = bomb.part.Position
 				if (Vector3.new(p.X, 0, p.Z) - Vector3.new(m.X, 0, m.Z)).Magnitude <= 7 then
 					hitPlayer = player
 					break
@@ -217,8 +235,8 @@ function ItemService.start()
 				slowUntil[hitPlayer] = clock + Constants.Items.SlowSeconds
 				applyMul(hitPlayer)
 				fireState(hitPlayer)
-				mine.part:Destroy()
-				table.remove(mines, i)
+				bomb.part:Destroy()
+				table.remove(bombs, i)
 			else
 				i += 1
 			end

@@ -12,7 +12,7 @@ local MarketService = {}
 
 local COLORS = {
 	Booster = Color3.fromRGB(255, 186, 48),
-	Landmine = Color3.fromRGB(220, 70, 80),
+	Bomb = Color3.fromRGB(220, 70, 80),
 }
 
 local function catalogItem(itemId: string): { Id: string, Name: string, Cost: number }?
@@ -38,12 +38,21 @@ function MarketService.tryBuy(player: Player, itemId: any)
 		InventoryService.reject(player, "shop closed")
 		return
 	end
-	if CreditService.get(player) < item.Cost then
-		InventoryService.reject(player, `need {item.Cost}`)
+	local credits = CreditService.get(player)
+	if credits < item.Cost then
+		InventoryService.reject(player, "not enough credits", {
+			cost = item.Cost,
+			credits = credits,
+			itemName = item.Name,
+		})
 		return
 	end
 	if not CreditService.trySpend(player, item.Cost) then
-		InventoryService.reject(player, `need {item.Cost}`)
+		InventoryService.reject(player, "not enough credits", {
+			cost = item.Cost,
+			credits = CreditService.get(player),
+			itemName = item.Name,
+		})
 		return
 	end
 	InventoryService.add(player, item.Id, 1)
@@ -55,6 +64,7 @@ local function makeStall(folder: Folder, item: { Id: string, Name: string, Cost:
 	part.Size = Vector3.new(7, 5, 7)
 	part.Anchored = true
 	part.CanCollide = false
+	part.CanQuery = true
 	part.Material = Enum.Material.SmoothPlastic
 	part.Color = COLORS[item.Id] or Color3.fromRGB(180, 180, 190)
 	part.CFrame = at
@@ -62,9 +72,22 @@ local function makeStall(folder: Folder, item: { Id: string, Name: string, Cost:
 
 	local click = Instance.new("ClickDetector")
 	click.Name = "Buy"
-	click.MaxActivationDistance = 160
+	click.MaxActivationDistance = 48
 	click.Parent = part
 	click.MouseClick:Connect(function(who)
+		MarketService.tryBuy(who, item.Id)
+	end)
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "Buy"
+	prompt.ActionText = "Buy"
+	prompt.ObjectText = `{item.Name}  {item.Cost} cr`
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 16
+	prompt.RequiresLineOfSight = false
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.Parent = part
+	prompt.Triggered:Connect(function(who)
 		MarketService.tryBuy(who, item.Id)
 	end)
 
@@ -105,11 +128,9 @@ local function spawnStalls()
 
 	local folder = Instance.new("Folder")
 	folder.Name = "KartMarket"
-	local origin = TrackService.getSpawnCFrame()
+	local n = #Constants.Shop.Items
 	for i, item in Constants.Shop.Items do
-		local along = (i - 1) * 12
-		local at = origin * CFrame.new(-48, 2.6, 8 + along)
-		makeStall(folder, item, at)
+		makeStall(folder, item, TrackService.getStallCFrame(i, n))
 	end
 	folder.Parent = Workspace
 end

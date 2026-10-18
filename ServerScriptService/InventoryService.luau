@@ -5,7 +5,7 @@ local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
 
 local ITEM_IDS = {
 	Booster = true,
-	Landmine = true,
+	Bomb = true,
 }
 
 local InventoryService = {}
@@ -16,7 +16,7 @@ local started = false
 local function bagFor(player: Player): { [string]: number }
 	local bag = bags[player]
 	if bag == nil then
-		bag = { Booster = 0, Landmine = 0 }
+		bag = { Booster = 0, Bomb = 0 }
 		bags[player] = bag
 	end
 	return bag
@@ -26,7 +26,7 @@ local function snapshot(player: Player): { [string]: number }
 	local bag = bagFor(player)
 	return {
 		Booster = bag.Booster or 0,
-		Landmine = bag.Landmine or 0,
+		Bomb = bag.Bomb or 0,
 	}
 end
 
@@ -77,8 +77,10 @@ function InventoryService.sync(player: Player)
 	fire(player)
 end
 
-function InventoryService.reject(player: Player, reason: string)
-	fire(player, { error = reason })
+function InventoryService.reject(player: Player, reason: string, extra: { [string]: any }?)
+	local payload = extra or {}
+	payload.error = reason
+	fire(player, payload)
 end
 
 function InventoryService.start()

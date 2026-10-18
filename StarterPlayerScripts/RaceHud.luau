@@ -88,7 +88,7 @@ function RaceHud.start()
 	toast.Name = "CreditToast"
 	toast.BackgroundTransparency = 1
 	toast.Position = UDim2.fromScale(0.02, 0.105)
-	toast.Size = UDim2.fromOffset(320, 24)
+	toast.Size = UDim2.fromOffset(420, 24)
 	toast.Font = Enum.Font.Gotham
 	toast.TextSize = 18
 	toast.TextXAlignment = Enum.TextXAlignment.Left
@@ -107,7 +107,7 @@ function RaceHud.start()
 	bag.TextXAlignment = Enum.TextXAlignment.Left
 	bag.TextColor3 = Color3.fromRGB(200, 210, 220)
 	bag.TextStrokeTransparency = 0.55
-	bag.Text = "Booster x0    Landmine x0"
+	bag.Text = "Booster x0    Bomb x0"
 	bag.Parent = gui
 
 	local effect = Instance.new("TextLabel")
@@ -123,6 +123,33 @@ function RaceHud.start()
 	effect.Text = ""
 	effect.Parent = gui
 
+	local speed = Instance.new("TextLabel")
+	speed.Name = "Speed"
+	speed.BackgroundTransparency = 1
+	speed.Position = UDim2.fromScale(0.5, 0.78)
+	speed.AnchorPoint = Vector2.new(0.5, 0)
+	speed.Size = UDim2.fromOffset(280, 52)
+	speed.Font = Enum.Font.GothamBlack
+	speed.TextSize = 42
+	speed.TextColor3 = Color3.new(1, 1, 1)
+	speed.TextStrokeTransparency = 0.35
+	speed.Text = "0"
+	speed.Visible = false
+	speed.Parent = gui
+
+	local speedUnit = Instance.new("TextLabel")
+	speedUnit.Name = "SpeedUnit"
+	speedUnit.BackgroundTransparency = 1
+	speedUnit.Position = UDim2.fromScale(0.5, 0.84)
+	speedUnit.AnchorPoint = Vector2.new(0.5, 0)
+	speedUnit.Size = UDim2.fromOffset(120, 20)
+	speedUnit.Font = Enum.Font.Gotham
+	speedUnit.TextSize = 14
+	speedUnit.TextColor3 = Color3.fromRGB(180, 180, 190)
+	speedUnit.Text = "SPD"
+	speedUnit.Visible = false
+	speedUnit.Parent = gui
+
 	local hint = Instance.new("TextLabel")
 	hint.Name = "Hint"
 	hint.BackgroundTransparency = 1
@@ -134,6 +161,26 @@ function RaceHud.start()
 	hint.TextColor3 = Color3.fromRGB(180, 180, 190)
 	hint.Text = "Waiting for the race"
 	hint.Parent = gui
+
+	local brokeBanner = Instance.new("TextLabel")
+	brokeBanner.Name = "BrokeBanner"
+	brokeBanner.BackgroundColor3 = Color3.fromRGB(70, 12, 18)
+	brokeBanner.BackgroundTransparency = 0.15
+	brokeBanner.BorderSizePixel = 0
+	brokeBanner.AnchorPoint = Vector2.new(0.5, 0.5)
+	brokeBanner.Position = UDim2.fromScale(0.5, 0.42)
+	brokeBanner.Size = UDim2.fromOffset(560, 88)
+	brokeBanner.Font = Enum.Font.GothamBlack
+	brokeBanner.TextSize = 26
+	brokeBanner.TextColor3 = Color3.fromRGB(255, 210, 210)
+	brokeBanner.TextStrokeTransparency = 0.4
+	brokeBanner.Text = ""
+	brokeBanner.TextWrapped = true
+	brokeBanner.Visible = false
+	brokeBanner.Parent = gui
+	local brokeCorner = Instance.new("UICorner")
+	brokeCorner.CornerRadius = UDim.new(0, 12)
+	brokeCorner.Parent = brokeBanner
 
 	local state = {
 		phase = "Lobby",
@@ -148,10 +195,14 @@ function RaceHud.start()
 		credits = 0,
 		toastUntil = 0,
 		booster = 0,
-		landmine = 0,
+		bomb = 0,
 		boostRemaining = 0,
 		slowRemaining = 0,
+		brokeUntil = 0,
 	}
+
+	local CREDIT_PANEL = Color3.fromRGB(8, 12, 20)
+	local CREDIT_TEXT = Color3.fromRGB(255, 236, 140)
 
 	local function showToast(text: string, ok: boolean)
 		toast.Text = text
@@ -159,8 +210,25 @@ function RaceHud.start()
 		state.toastUntil = os.clock() + 3
 	end
 
+	local function showNotEnough(itemName: string, cost: number, have: number)
+		showToast(`Not enough credits for {itemName}  (need {cost}, have {have})`, false)
+		brokeBanner.Text = `NOT ENOUGH CREDITS\n{itemName} needs {cost}   ·   you have {have}`
+		brokeBanner.Visible = true
+		creditPanel.BackgroundColor3 = Color3.fromRGB(96, 18, 28)
+		credits.TextColor3 = Color3.fromRGB(255, 150, 150)
+		state.brokeUntil = os.clock() + 4
+	end
+
+	local function clearBroke()
+		brokeBanner.Visible = false
+		brokeBanner.Text = ""
+		creditPanel.BackgroundColor3 = CREDIT_PANEL
+		credits.TextColor3 = CREDIT_TEXT
+		state.brokeUntil = 0
+	end
+
 	local function renderBag()
-		bag.Text = `Booster x{state.booster}    Landmine x{state.landmine}`
+		bag.Text = `Booster x{state.booster}    Bomb x{state.bomb}`
 	end
 
 	local function renderEffect()
@@ -178,6 +246,24 @@ function RaceHud.start()
 	local function renderCredits(n: number)
 		state.credits = n
 		credits.Text = `Credits: {n}`
+	end
+
+	local function renderSpeed()
+		local show = state.phase == "Countdown" or state.phase == "Racing" or state.phase == "Podium"
+		speed.Visible = show
+		speedUnit.Visible = show
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local seat = humanoid and humanoid.SeatPart
+		local car = seat and seat.Parent
+		local v = 0
+		if car and car:IsA("Model") then
+			local raw = car:GetAttribute("HudSpeed")
+			if typeof(raw) == "number" then
+				v = raw
+			end
+		end
+		speed.Text = tostring(math.floor(v + 0.5))
 	end
 
 	local function currentLapLabel(): string
@@ -211,7 +297,7 @@ function RaceHud.start()
 			else
 				status.Text = "Lobby"
 			end
-			hint.Text = "Race starts soon"
+			hint.Text = "Walk the shop · click a kart · sit before green"
 		elseif payload.state == "Selecting" then
 			state.frozen = true
 			state.displayElapsed = 0
@@ -223,7 +309,7 @@ function RaceHud.start()
 				hint.Text = "Locked in — wait for the field"
 			else
 				status.Text = "Pick a racer"
-				hint.Text = "Pick a racer to lock in"
+				hint.Text = "Walk the shop · click a kart · sit before green"
 			end
 		elseif payload.state == "Countdown" then
 			state.frozen = true
@@ -231,7 +317,7 @@ function RaceHud.start()
 			timer.Visible = true
 			standings.Visible = true
 			timer.Text = "0:00.00"
-			hint.Text = "WASD drive · E boost · Q mine"
+			hint.Text = "WASD drive · E boost · Q bomb"
 			if payload.spectator then
 				status.Text = "Waiting for next race"
 			elseif payload.countdown and payload.countdown > 0 then
@@ -247,7 +333,7 @@ function RaceHud.start()
 				status.Text = "Waiting for next race"
 				hint.Text = "You join the next round"
 			else
-				hint.Text = "WASD drive · E boost · Q mine"
+				hint.Text = "WASD drive · E boost · Q bomb"
 				state.frozen = false
 				state.startedAt = os.clock() - (payload.elapsed or 0)
 				status.Text = "Racing"
@@ -314,13 +400,23 @@ function RaceHud.start()
 			if typeof(inv.Booster) == "number" then
 				state.booster = inv.Booster
 			end
-			if typeof(inv.Landmine) == "number" then
-				state.landmine = inv.Landmine
+			if typeof(inv.Bomb) == "number" then
+				state.bomb = inv.Bomb
 			end
 			renderBag()
 		end
-		if typeof(payload.error) == "string" then
-			showToast(payload.error, false)
+		if payload.error == "not enough credits" then
+			local cost = if typeof(payload.cost) == "number" then payload.cost else 0
+			local have = if typeof(payload.credits) == "number" then payload.credits else state.credits
+			local name = if typeof(payload.itemName) == "string" then payload.itemName else "item"
+			showNotEnough(name, cost, have)
+		elseif typeof(payload.error) == "string" then
+			local needAmount = string.match(payload.error, "^need (%d+)$")
+			if needAmount then
+				showNotEnough("item", tonumber(needAmount) or 0, state.credits)
+			else
+				showToast(payload.error, false)
+			end
 		elseif typeof(payload.picked) == "string" then
 			showToast(`picked up {payload.picked}`, true)
 		elseif typeof(payload.bought) == "string" then
@@ -346,6 +442,9 @@ function RaceHud.start()
 			toast.Text = ""
 			state.toastUntil = 0
 		end
+		if state.brokeUntil > 0 and os.clock() > state.brokeUntil then
+			clearBroke()
+		end
 		if state.boostRemaining > 0 then
 			state.boostRemaining = math.max(0, state.boostRemaining - dt)
 		end
@@ -353,6 +452,7 @@ function RaceHud.start()
 			state.slowRemaining = math.max(0, state.slowRemaining - dt)
 		end
 		renderEffect()
+		renderSpeed()
 		if state.frozen or state.phase ~= "Racing" or state.startedAt == nil then
 			return
 		end

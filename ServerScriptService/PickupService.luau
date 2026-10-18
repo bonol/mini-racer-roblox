@@ -13,7 +13,7 @@ end
 local TAG = "ItemPickup"
 local COLORS = {
 	Booster = Color3.fromRGB(255, 186, 48),
-	Landmine = Color3.fromRGB(220, 70, 80),
+	Bomb = Color3.fromRGB(220, 70, 80),
 }
 
 type Pad = {
@@ -29,7 +29,7 @@ local pads: { Pad } = {}
 local started = false
 
 local function randomItem(): string
-	return if math.random() < 0.5 then "Booster" else "Landmine"
+	return if math.random() < 0.5 then "Booster" else "Bomb"
 end
 
 local function stylePad(part: BasePart, itemId: string)

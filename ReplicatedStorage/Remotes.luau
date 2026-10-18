@@ -14,6 +14,7 @@ local NAMES = {
 	InventoryChanged = "InventoryChanged",
 	UseItem = "UseItem",
 	ItemStateChanged = "ItemStateChanged",
+	RecoverCar = "RecoverCar",
 }
 
 local Remotes = {

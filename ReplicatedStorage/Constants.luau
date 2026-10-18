@@ -25,6 +25,9 @@ local Constants = {
 		RoadWidth = 80,
 		BarrierHeight = 6,
 		WallBounce = 0.58,
+		ClimbDegrees = 30,
+		ClimbMinMul = 0.25,
+		ClimbPeakMax = 48,
 	},
 	Credits = {
 		StartingBalance = 10,
@@ -35,17 +38,25 @@ local Constants = {
 	Shop = {
 		OpenStates = { Lobby = true, Selecting = true },
 		Items = {
-			{ Id = "Booster", Name = "Booster", Cost = 80 },
-			{ Id = "Landmine", Name = "Landmine", Cost = 70 },
+			{ Id = "Booster", Name = "Booster", Cost = 20 },
+			{ Id = "Bomb", Name = "Bomb", Cost = 10 },
 		},
 	},
 	Items = {
 		BoostMul = 1.5,
 		BoostSeconds = 3,
 		SlowMul = 0.7,
-		SlowSeconds = 5,
-		MineArmSeconds = 0.6,
+		SlowSeconds = 3,
 		PickupRespawnSeconds = 10,
+	},
+	Audio = {
+		Background = "rbxassetid://104976378455015",
+		Countdown = "rbxassetid://133467521581745",
+		Lap = "rbxassetid://82669582574373",
+		BoostPickup = "rbxassetid://122016420402975",
+		BombPickup = "rbxassetid://93170321014352",
+		BombHit = "rbxassetid://89479472135872",
+		Winner = "rbxassetid://120657237573902",
 	},
 }
 

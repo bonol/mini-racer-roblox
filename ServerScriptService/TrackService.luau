@@ -192,6 +192,85 @@ local function applyBumps(centerline: { Vector3 }, spawnCFrame: CFrame)
 	end
 end
 
+local function applyCurveClimbs(centerline: { Vector3 })
+	local n = #centerline
+	if n < 16 then
+		return
+	end
+	local grade = math.tan(math.rad(Constants.Track.ClimbDegrees))
+	local peakMax = Constants.Track.ClimbPeakMax
+	local cum = table.create(n)
+	local total = 0
+	for i = 1, n do
+		cum[i] = total
+		local a = centerline[i]
+		local b = wrap(centerline, i + 1)
+		total += (Vector3.new(b.X, 0, b.Z) - Vector3.new(a.X, 0, a.Z)).Magnitude
+	end
+
+	local marked = table.create(n, false)
+	for i = 1, n do
+		local prev = heading(wrap(centerline, i - 1), centerline[i])
+		local this = heading(centerline[i], wrap(centerline, i + 1))
+		local ang = math.deg(math.acos(math.clamp(prev:Dot(this), -1, 1)))
+		if ang >= 7 then
+			marked[i] = true
+		end
+	end
+	local dilated = table.create(n, false)
+	for i = 1, n do
+		if marked[i] then
+			for d = -6, 6 do
+				dilated[((i + d - 1) % n) + 1] = true
+			end
+		end
+	end
+
+	local extra = table.create(n, 0)
+	local i = 1
+	while i <= n do
+		if not dilated[i] then
+			i += 1
+			continue
+		end
+		local j = i
+		while j <= n and dilated[j] do
+			j += 1
+		end
+		local first, last = i, j - 1
+		i = j
+		if last - first < 8 then
+			continue
+		end
+		first = math.max(1, first - 14)
+		last = math.min(n, last + 14)
+		local apex = math.floor((first + last) * 0.5)
+		local function horiz(from: number, to: number): number
+			return math.abs(cum[to] - cum[from])
+		end
+		local climbRun = horiz(first, apex)
+		local dropRun = horiz(apex, last)
+		local peak = math.min(climbRun, dropRun) * grade
+		peak = math.min(peak, peakMax)
+		if peak < 5 then
+			continue
+		end
+		for k = first, apex do
+			extra[k] = math.max(extra[k], math.min(horiz(first, k) * grade, peak))
+		end
+		for k = apex, last do
+			extra[k] = math.max(extra[k], math.max(peak - horiz(apex, k) * grade, 0))
+		end
+	end
+
+	for idx, p in centerline do
+		local add = extra[idx] or 0
+		if add > 0.05 then
+			centerline[idx] = Vector3.new(p.X, p.Y + add, p.Z)
+		end
+	end
+end
+
 local function part(props: { [string]: any }): Part
 	local instance = Instance.new("Part")
 	instance.Anchored = true
@@ -381,6 +460,7 @@ local function build()
 	local acc = 0
 	local spawnCFrame = pitStraightSpawn(centerline)
 	applyBumps(centerline, spawnCFrame)
+	applyCurveClimbs(centerline)
 	local checkpointAt = {
 		[1] = total * 0.25,
 		[2] = total * 0.5,
@@ -465,32 +545,44 @@ local function build()
 	hideBaseplate()
 
 	model.Parent = Workspace
+	TrackService.ensurePlaza()
 end
 
 function TrackService.buildIfNeeded()
-	if Workspace:FindFirstChild("MiniRacerTrack") then
+	if Workspace:FindFirstChild("MiniRacerTrack") == nil then
+		build()
 		return
 	end
-	build()
+	TrackService.ensurePlaza()
 end
 
 function TrackService.rebuild()
 	build()
 end
 
-function TrackService.getSpawnCFrame(): CFrame
+function TrackService.getStripeCFrame(): CFrame
 	local tagged = CollectionService:GetTagged(Constants.Track.SpawnTag)
 	if #tagged > 0 then
 		local spawn = tagged[1] :: BasePart
-		return spawn.CFrame + Vector3.new(0, Constants.Car.SpawnHeight, 0)
+		return spawn.CFrame
 	end
-	return CFrame.new(250, Constants.Car.SpawnHeight, -165)
+	return CFrame.new(250, 1.2, -165)
+end
+
+function TrackService.getSpawnCFrame(): CFrame
+	return TrackService.getStripeCFrame() + Vector3.new(0, Constants.Car.SpawnHeight, 0)
 end
 
 local GRID_COLS = 4
 local GRID_COL_SPACING = 16
 local GRID_ROW_SPACING = 20
 local GRID_BACK = 16
+
+-- Infield is local -X (south of the eastbound pit). Road half-width is 40.
+local PLAZA_X = -92
+local PLAZA_Z = 18
+local PADDOCK_X = -110
+local STALL_X = -74
 
 function TrackService.getGridCFrame(slotIndex: number, slotCount: number): CFrame
 	local spawn = TrackService.getSpawnCFrame()
@@ -502,6 +594,131 @@ function TrackService.getGridCFrame(slotIndex: number, slotCount: number): CFram
 	local x = (col - (colsThisRow - 1) / 2) * GRID_COL_SPACING
 	local z = GRID_BACK + row * GRID_ROW_SPACING
 	return spawn * CFrame.new(x, 0, z)
+end
+
+function TrackService.getPlazaSpawnCFrame(): CFrame
+	local stripe = TrackService.getStripeCFrame()
+	return stripe * CFrame.new(PLAZA_X, 4.2, PLAZA_Z)
+end
+
+function TrackService.getPaddockCFrame(index: number, count: number): CFrame
+	local stripe = TrackService.getStripeCFrame()
+	local n = math.max(count, 1)
+	local i = math.clamp(math.floor(index), 1, n)
+	local along = (i - (n + 1) / 2) * 9.5
+	local at = stripe * CFrame.new(PADDOCK_X, 3.4, PLAZA_Z + along)
+	local lookAt = Vector3.new(stripe.Position.X, at.Position.Y, stripe.Position.Z)
+	return CFrame.lookAt(at.Position, lookAt)
+end
+
+function TrackService.getStallCFrame(index: number, count: number): CFrame
+	local stripe = TrackService.getStripeCFrame()
+	local n = math.max(count, 1)
+	local i = math.clamp(math.floor(index), 1, n)
+	local along = (i - (n + 1) / 2) * 14
+	return stripe * CFrame.new(STALL_X, 3.6, PLAZA_Z + along)
+end
+
+function TrackService.getRecoverCFrame(checkpointIndex: number): CFrame
+	local checkpoints = TrackService.getCheckpoints()
+	local index = math.clamp(math.floor(checkpointIndex), 1, math.max(#checkpoints, 1))
+	local gate = checkpoints[index]
+	if gate then
+		return gate.CFrame * CFrame.new(0, 3.4, 8)
+	end
+	return TrackService.getSpawnCFrame()
+end
+
+function TrackService.isOffTrack(pos: Vector3): boolean
+	if pos.Y < -20 or pos.Y > 180 then
+		return true
+	end
+	return pos.X < -1600 or pos.X > 1700 or pos.Z < -980 or pos.Z > 220
+end
+
+function TrackService.ensurePlaza()
+	local stripe = TrackService.getStripeCFrame()
+
+	local plaza = Workspace:FindFirstChild("KartPlaza")
+	if plaza then
+		plaza:Destroy()
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "KartPlaza"
+
+	local pad = part({
+		Name = "PlazaFloor",
+		Size = Vector3.new(56, 1.2, 92),
+		CFrame = stripe * CFrame.new(PLAZA_X, 0.9, PLAZA_Z),
+		Color = Color3.fromRGB(52, 56, 64),
+		Material = Enum.Material.Asphalt,
+		Parent = folder,
+	})
+	pad.TopSurface = Enum.SurfaceType.Smooth
+
+	local paddockPad = part({
+		Name = "PaddockPad",
+		Size = Vector3.new(22, 0.6, 64),
+		CFrame = stripe * CFrame.new(PADDOCK_X, 1.35, PLAZA_Z),
+		Color = Color3.fromRGB(38, 42, 50),
+		Material = Enum.Material.Asphalt,
+		Parent = folder,
+	})
+	paddockPad.CanCollide = false
+
+	local stallPad = part({
+		Name = "MarketPad",
+		Size = Vector3.new(22, 0.6, 40),
+		CFrame = stripe * CFrame.new(STALL_X, 1.35, PLAZA_Z),
+		Color = Color3.fromRGB(64, 48, 36),
+		Material = Enum.Material.Asphalt,
+		Parent = folder,
+	})
+	stallPad.CanCollide = false
+
+	part({
+		Name = "PlazaCurb",
+		Size = Vector3.new(2.2, 3.4, 96),
+		CFrame = stripe * CFrame.new(-46, 2.2, PLAZA_Z),
+		Color = Color3.fromRGB(210, 210, 216),
+		Material = Enum.Material.Concrete,
+		Parent = folder,
+	})
+
+	folder.Parent = Workspace
+
+	local grid = Workspace:FindFirstChild("KartGrid")
+	if grid then
+		grid:Destroy()
+	end
+	local gridFolder = Instance.new("Folder")
+	gridFolder.Name = "KartGrid"
+	local paints = {
+		Color3.fromRGB(36, 98, 222),
+		Color3.fromRGB(46, 168, 78),
+		Color3.fromRGB(240, 142, 178),
+		Color3.fromRGB(214, 102, 36),
+		Color3.fromRGB(48, 56, 96),
+		Color3.fromRGB(236, 196, 48),
+		Color3.fromRGB(180, 180, 190),
+		Color3.fromRGB(160, 80, 200),
+	}
+	for i = 1, 8 do
+		local at = TrackService.getGridCFrame(i, 8)
+		part({
+			Name = "GridSlot_" .. i,
+			Size = Vector3.new(10, 0.22, 16),
+			CFrame = at * CFrame.new(0, -Constants.Car.SpawnHeight + 0.2, 0),
+			Color = paints[i],
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+			CanQuery = false,
+			Parent = gridFolder,
+		})
+	end
+	gridFolder.Parent = Workspace
+
+	hideDefaultSpawn(TrackService.getPlazaSpawnCFrame())
 end
 
 function TrackService.getCheckpoints(): { BasePart }

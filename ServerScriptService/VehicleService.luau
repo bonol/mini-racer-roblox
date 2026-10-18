@@ -57,22 +57,20 @@ local function spawnPaddock()
 	local folder = Instance.new("Folder")
 	folder.Name = "KartPaddock"
 
-	local origin = TrackService.getSpawnCFrame()
 	local palettes = KartPrototype.Palettes
 	for i, palette in palettes do
 		local car = KartPrototype.spawn(palette)
 		KartPrototype.makeDisplay(car)
 		car.Name = "Kart_" .. palette.Id
-		local along = (i - (#palettes + 1) / 2) * 9.5
-		local at = origin * CFrame.new(48, 0, 8 + along)
-		car:PivotTo(CFrame.lookAt(at.Position, Vector3.new(origin.Position.X, at.Position.Y, origin.Position.Z)))
+		local at = TrackService.getPaddockCFrame(i, #palettes)
+		car:PivotTo(at)
 
 		local body = car.PrimaryPart
 		if body then
 			body.CanQuery = true
 			local click = Instance.new("ClickDetector")
 			click.Name = "ChooseKart"
-			click.MaxActivationDistance = 120
+			click.MaxActivationDistance = 36
 			click.Parent = body
 			click.MouseClick:Connect(function(who)
 				if paddockHandler then
@@ -174,25 +172,26 @@ function VehicleService.setPaddockHandler(handler: (Player, string) -> ())
 	paddockHandler = handler
 end
 
-function VehicleService.freezeForSelect(player: Player)
+function VehicleService.sendToPlaza(player: Player)
 	local character = player.Character
 	if character == nil then
 		return
 	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = 0
-		humanoid.JumpPower = 0
-		humanoid.JumpHeight = 0
+		restoreHumanoid(humanoid)
 		humanoid.Sit = false
-		humanoid.AutoRotate = false
 	end
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		root.CFrame = TrackService.getSpawnCFrame() * CFrame.new(0, 1.5, 10)
+		root.CFrame = TrackService.getPlazaSpawnCFrame()
 		root.AssemblyLinearVelocity = Vector3.zero
 		root.AssemblyAngularVelocity = Vector3.zero
 	end
+end
+
+function VehicleService.freezeForSelect(player: Player)
+	VehicleService.sendToPlaza(player)
 end
 
 function VehicleService.spawnFor(player: Player, paletteId: string?, slotIndex: number?, slotCount: number?): Model

@@ -1,6 +1,6 @@
 # v2.4 — Track made for racing
 
-**Status:** not started  
+**Status:** implemented (solo Studio Play verified; two-client Start Server still a manual check)  
 **Depends on:** [v2.0 shared race](01-shared-race.md) (required). Better **after 2.2–2.3** so the plaza has a shop and the grid is not rebuilt twice.  
 **Unlocks:** v2 north-star loop complete
 
