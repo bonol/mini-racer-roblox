@@ -15,6 +15,30 @@ Supersedes: … (or none)
 
 ---
 
+## 2026-10-19 — Invisible wall on the rails
+
+Decided: Visual rails stay `BarrierHeight = 6`. An invisible `BarrierWall` on the same line is `BarrierWallHeight = 28`. DriveSim treats both as walls; hops cannot leave the circuit.
+
+Why: A 1.2× kart hop peaks above the 6-stud rail. Testers could jump onto the grass.
+
+Supersedes: none
+
+## 2026-10-19 — Hop is about one kart tall
+
+Decided: `Car.JumpHeightFrac = 1.2` (peak ≈ **3.8 studs**, ~0.43s hang). Bomb slab stays **10%** of kart height. Same gravity; boost/slow still scale takeoff by `√mul`.
+
+Why: The 25% hop was a twitch on camera. One-kart-tall is obvious and still clears the 10% slab with timing.
+
+Supersedes: 2026-10-19 Space hops the kart (peak 25% only)
+
+## 2026-10-19 — Space hops the kart; bombs have height
+
+Decided: Space jumps the **kart** (humanoid stays seated; still no eject). Kart envelope `Car.Height = 3.2`. A normal hop peaks at **25%** of that height. Bomb hit is XZ radius **7** and a vertical slab **10%** of kart height above the road under the kart — grounded karts still hit; a timed hop clears. Jump uses DriveSim gravity (`vy = √(2gh)`). Air travel follows physics: boost/slow at takeoff scales hop height by `√mul`; horizontal speed sets distance; downhill/uphill change hang because the road falls away or rises; air steer is `0.35×`. Slow in the air keeps the current `vy` and cuts XZ speed.
+
+Why: Testers wanted to hop bombs. A 10% slab vs a 25% hop leaves a timing window without launching off the 30° grades.
+
+Supersedes: Space only blocked as seat-eject; bomb hit was XZ-only
+
 ## 2026-10-19 — Compact kart picker; plaza after race
 
 Decided: Kart-select cards are **half size** (75×105) in a compact bottom dock so the plaza stays visible. After a race, `enterPodium` despawns grid karts and teleports everyone to the plaza immediately. Shop is open in **Podium / Lobby / Selecting**. `LobbyWaitSeconds = 12` (was 8).

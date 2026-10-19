@@ -40,12 +40,22 @@ function DriveController.start()
 	local racing = false
 	local seatedCar: Model? = nil
 	local replicateAccum = 0
+	local jumpQueued = false
+	local jumpArmed = true
+
+	local function queueKartJump()
+		if racing and jumpArmed then
+			jumpQueued = true
+			jumpArmed = false
+		end
+	end
 
 	UserInputService.JumpRequest:Connect(function()
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid.SeatPart then
 			humanoid.Jump = false
+			queueKartJump()
 		end
 	end)
 
@@ -53,7 +63,13 @@ function DriveController.start()
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			held[input.KeyCode] = true
 		end
-		if processed or UserInputService:GetFocusedTextBox() ~= nil then
+		if UserInputService:GetFocusedTextBox() ~= nil then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.Space then
+			queueKartJump()
+		end
+		if processed then
 			return
 		end
 		if not racing then
@@ -68,6 +84,9 @@ function DriveController.start()
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			held[input.KeyCode] = nil
+		end
+		if input.KeyCode == Enum.KeyCode.Space then
+			jumpArmed = true
 		end
 	end)
 
@@ -118,12 +137,16 @@ function DriveController.start()
 		if car:GetAttribute("CanDrive") == false then
 			throttle = 0
 			steer = 0
+			jumpQueued = false
 		end
 
-		DriveSim.step(sim, car, character, throttle, steer, dt)
+		local wantJump = jumpQueued
+		jumpQueued = false
+		DriveSim.step(sim, car, character, throttle, steer, dt, wantJump)
 
 		replicateAccum += dt
-		if replicateAccum >= 1 / 15 and car.PrimaryPart then
+		local rate = if sim.airborne then 1 / 60 else 1 / 15
+		if car.PrimaryPart and (wantJump or replicateAccum >= rate) then
 			replicateAccum = 0
 			Remotes.get("DriveInput"):FireServer(car.PrimaryPart.CFrame)
 		end

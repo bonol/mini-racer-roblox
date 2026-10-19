@@ -41,7 +41,7 @@ local function restoreHumanoid(humanoid: Humanoid)
 	end)
 end
 
--- Space is Roblox's seat-eject. Race karts stay occupied until despawn.
+-- Space hops the kart in DriveSim. Keep the humanoid locked so it cannot eject.
 local function lockSeatedHumanoid(humanoid: Humanoid)
 	humanoid.JumpPower = 0
 	humanoid.JumpHeight = 0

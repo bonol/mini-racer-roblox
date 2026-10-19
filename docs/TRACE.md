@@ -12,6 +12,12 @@ Play: Playtesters | other Studio | skipped (MCP down) — one-line evidence
 
 ---
 
+## 2026-10-19 — Hop the kart, keep it on the circuit
+
+What: Space hops the kart (~1.2× height) with gravity; bombs use a 10% Y slab; downhill boost no longer flies. Invisible 28-stud BarrierWall on the rails so hops cannot leave the circuit.
+
+Play: Playtesters (`98798376352087`) — MiniRacerTrack rebuilt with 1689 BarrierWalls (H=28, T=1); boosted hop into a rail peaked ~7.9 studs, stayed on Road (maxSide −4.8, 0 grass).
+
 ## 2026-10-19 — Compact kart picker, plaza after race, extra stings
 
 What: Half-size kart dock; podium despawns to plaza with shop open and 12s lobby wait. Extra Toolbox stings: BombDrop, BombHit swap, LastLap, BoostUse, second background bed.

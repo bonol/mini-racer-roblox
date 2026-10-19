@@ -60,6 +60,30 @@ local function fireState(player: Player)
 	})
 end
 
+local function surfaceY(from: Vector3): number?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local exclude: { Instance } = {}
+	if bombFolder then
+		table.insert(exclude, bombFolder)
+	end
+	params.FilterDescendantsInstances = exclude
+	local origin = from + Vector3.new(0, 12, 0)
+	local hit = Workspace:Raycast(origin, Vector3.new(0, -240, 0), params)
+	if hit and (hit.Instance.Name == "Road" or hit.Instance.Name == "Grass") then
+		return hit.Position.Y
+	end
+	return nil
+end
+
+local function kartLift(pos: Vector3): number
+	local ground = surfaceY(pos)
+	if ground == nil then
+		return 0
+	end
+	return math.max(0, pos.Y - ground - Constants.Car.BodyHover)
+end
+
 local function ensureBombFolder(): Folder
 	local leftover = Workspace:FindFirstChild("KartMines")
 	if leftover then
@@ -128,7 +152,8 @@ function ItemService.dropBomb(player: Player)
 	part.CanTouch = false
 	part.Material = Enum.Material.Neon
 	part.Color = Color3.fromRGB(220, 40, 48)
-	part.CFrame = CFrame.new(pos.X, 2.8, pos.Z)
+	local groundY = surfaceY(pos) or (pos.Y - Constants.Car.BodyHover)
+	part.CFrame = CFrame.new(pos.X, groundY + part.Size.Y * 0.5, pos.Z)
 	part.Parent = ensureBombFolder()
 
 	local light = Instance.new("PointLight")
@@ -226,7 +251,8 @@ function ItemService.start()
 				end
 				local p = cf.Position
 				local m = bomb.part.Position
-				if (Vector3.new(p.X, 0, p.Z) - Vector3.new(m.X, 0, m.Z)).Magnitude <= 7 then
+				local xz = (Vector3.new(p.X, 0, p.Z) - Vector3.new(m.X, 0, m.Z)).Magnitude
+				if xz <= Constants.Items.BombRadius and kartLift(p) < Constants.Car.Height * Constants.Items.BombHeightFrac then
 					hitPlayer = player
 					break
 				end

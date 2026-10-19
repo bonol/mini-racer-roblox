@@ -101,7 +101,8 @@ All five phases are **implemented**. Catalogs in `docs/v2/` are historical (they
 **Attachments**
 
 - Booster: cost **20**; **1.5×** speed for **3s**; does not stack with itself
-- Bomb: cost **10**; Q drops a neon bomb; anyone within 7 studs is slowed **0.7×** for **3s**, including the dropper
+- Bomb: cost **10**; Q drops a neon bomb; anyone within **7** studs XZ and **10%** of kart height above the road is slowed **0.7×** for **3s**, including the dropper. A timed Space hop (peak **~1.2×** kart height) clears it
+- Space hops the kart (does not eject). Air travel uses gravity; boost/slow and slopes change hang/distance. Invisible `BarrierWall` on the rails (`BarrierWallHeight = 28`) keeps hops on the circuit; visual rails stay 6
 - Slow and boost: if both apply, **slow wins** until it expires
 - Checkpoint pickup: 1 live pickup per checkpoint; random Booster or Bomb; cannot vacuum the same pad twice in one pass
 
@@ -117,7 +118,7 @@ All five phases are **implemented**. Catalogs in `docs/v2/` are historical (they
 
 - Play-verify on **Mini Racer [testing]**, PlaceId `98798376352087` (not PlaceId 0 / `.rbxlx`)
 - Keep the Toolbox ids in `Constants.Audio` (11 clips: two backgrounds, LastLap, BoostUse, BombDrop); do not swap for generic packs
-- Do not rewrite the kart / `DriveSim` controller
+- Do not rewrite the kart / `DriveSim` controller (hop is an add-on to the same integrator)
 
 ---
 

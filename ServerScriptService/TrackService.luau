@@ -346,7 +346,8 @@ local function placeStrip(
 	canCollide: boolean,
 	extra: number,
 	parent: Instance,
-	imageFace: Enum.NormalId?
+	imageFace: Enum.NormalId?,
+	transparency: number?
 )
 	local created = 0
 	for i = 1, #points do
@@ -369,6 +370,10 @@ local function placeStrip(
 			CanCollide = canCollide,
 			Parent = parent,
 		})
+		if transparency ~= nil then
+			segment.Transparency = transparency
+			segment.CastShadow = false
+		end
 		segment:SetAttribute("ThemeIndex", i)
 		if imageFace then
 			themeTexture(segment, imageFace, "Barrier", 15, 6)
@@ -815,6 +820,7 @@ local function build()
 	local centerline = sampleCenterline()
 	local width = Constants.Track.RoadWidth
 	local railHeight = Constants.Track.BarrierHeight
+	local wallHeight = Constants.Track.BarrierWallHeight or 28
 	local created = 0
 
 	local minX, maxX, minZ, maxZ = CONTROL[1].X, CONTROL[1].X, CONTROL[1].Z, CONTROL[1].Z
@@ -933,6 +939,34 @@ local function build()
 	placeStrip(offsetLoop(centerline, -(half - 1.1)), "Kerb", 2.2, 0.35, 1.9, kerbColor, Enum.Material.SmoothPlastic, false, 0.9, model)
 	placeStrip(offsetLoop(centerline, half + 1.6), "Barrier", 1.6, railHeight, railHeight / 2 - 0.2, railColor, Enum.Material.Metal, true, 1.35, model, Enum.NormalId.Right)
 	placeStrip(offsetLoop(centerline, -(half + 1.6)), "Barrier", 1.6, railHeight, railHeight / 2 - 0.2, railColor, Enum.Material.Metal, true, 1.35, model, Enum.NormalId.Left)
+	placeStrip(
+		offsetLoop(centerline, half + 1.6),
+		"BarrierWall",
+		1.2,
+		wallHeight,
+		wallHeight / 2 - 0.2,
+		railColor,
+		Enum.Material.SmoothPlastic,
+		true,
+		1.35,
+		model,
+		nil,
+		1
+	)
+	placeStrip(
+		offsetLoop(centerline, -(half + 1.6)),
+		"BarrierWall",
+		1.2,
+		wallHeight,
+		wallHeight / 2 - 0.2,
+		railColor,
+		Enum.Material.SmoothPlastic,
+		true,
+		1.35,
+		model,
+		nil,
+		1
+	)
 
 	local spawn = part({
 		Name = "StartSpawn",

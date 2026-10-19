@@ -318,7 +318,7 @@ function RaceHud.start()
 			standings.Visible = true
 			timer.Text = "0:00.00"
 			hint.Visible = true
-			hint.Text = "WASD drive · E boost · Q bomb"
+			hint.Text = "WASD drive · Space jump · E boost · Q bomb"
 			if payload.spectator then
 				status.Text = "Waiting for next race"
 			elseif payload.countdown and payload.countdown > 0 then
@@ -335,7 +335,7 @@ function RaceHud.start()
 				status.Text = "Waiting for next race"
 				hint.Text = "You join the next round"
 			else
-				hint.Text = "WASD drive · E boost · Q bomb"
+				hint.Text = "WASD drive · Space jump · E boost · Q bomb"
 				state.frozen = false
 				state.startedAt = os.clock() - (payload.elapsed or 0)
 				status.Text = "Racing"

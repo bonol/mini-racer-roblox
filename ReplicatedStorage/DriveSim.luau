@@ -4,13 +4,15 @@ local Constants = require(script.Parent:WaitForChild("Constants"))
 
 local DriveSim = {}
 
-local BODY_HOVER = 1.7
+local BODY_HOVER = Constants.Car.BodyHover
 local WALL_SKIN = 0.35
 local MAX_STEP_SLACK = 0.75
 local GRAVITY = 168
-local MAX_LAUNCH = 52
 local LAND_BOUNCE = 0.26
 local BOUNCE_MIN = 22
+local STICK_UP = 8
+local STICK_DOWN = 10
+local GROUND_RAY = 240
 local REVERSE_MAX = Constants.Car.MaxSpeed * 0.55
 
 export type State = {
@@ -19,6 +21,7 @@ export type State = {
 	vy: number,
 	lastMul: number,
 	slowCap: number?,
+	airborne: boolean,
 }
 
 function DriveSim.newState(at: CFrame?): State
@@ -28,11 +31,12 @@ function DriveSim.newState(at: CFrame?): State
 		vy = 0,
 		lastMul = 1,
 		slowCap = nil,
+		airborne = false,
 	}
 end
 
 local function isWall(instance: Instance?): boolean
-	return instance ~= nil and instance.Name == "Barrier"
+	return instance ~= nil and (instance.Name == "Barrier" or instance.Name == "BarrierWall")
 end
 
 local function excludeParams(model: Model, character: Model?): (RaycastParams, OverlapParams)
@@ -49,26 +53,52 @@ local function excludeParams(model: Model, character: Model?): (RaycastParams, O
 	return ray, overlap
 end
 
-local function groundY(model: Model, character: Model?, from: Vector3): number
+local function groundY(model: Model, character: Model?, from: Vector3): number?
 	local ray = select(1, excludeParams(model, character))
-	local origin = from + Vector3.new(0, 8, 0)
-	local remaining = 48
-	for _ = 1, 8 do
+	local origin = from + Vector3.new(0, 12, 0)
+	local remaining = GROUND_RAY
+	for _ = 1, 16 do
+		if remaining < 2 then
+			return nil
+		end
 		local hit = Workspace:Raycast(origin, Vector3.new(0, -remaining, 0), ray)
 		if hit == nil then
-			return from.Y
+			return nil
 		end
 		local name = hit.Instance.Name
 		if name == "Road" or name == "Grass" then
 			return hit.Position.Y + BODY_HOVER
 		end
-		origin = hit.Position + Vector3.new(0, -0.2, 0)
-		remaining -= 0.2
-		if remaining < 2 then
-			break
-		end
+		origin = hit.Position + Vector3.new(0, -0.15, 0)
+		remaining -= math.max(hit.Distance, 0.15) + 0.15
 	end
-	return from.Y
+	return nil
+end
+
+function DriveSim.followGround(y: number, vy: number, ground: number?, dt: number, airborne: boolean?): (number, number, boolean)
+	dt = math.max(dt, 1 / 240)
+	local inAir = airborne == true
+	if ground ~= nil and not inAir then
+		local above = y - ground
+		if above <= STICK_DOWN and -above <= STICK_UP then
+			return ground, 0, false
+		end
+		inAir = true
+	end
+	vy -= GRAVITY * dt
+	y += vy * dt
+	if ground ~= nil and y <= ground then
+		y = ground
+		if vy < -BOUNCE_MIN then
+			vy = -vy * LAND_BOUNCE
+			return y, vy, vy > 6
+		end
+		return y, 0, false
+	end
+	if ground == nil and y < BODY_HOVER then
+		return BODY_HOVER, 0, false
+	end
+	return y, vy, true
 end
 
 local function flatten(v: Vector3): Vector3
@@ -104,8 +134,9 @@ local function reflectVelocity(vel: Vector3, normal: Vector3): Vector3
 	return flatten(vel - (1 + Constants.Track.WallBounce) * into * n)
 end
 
-local function sweepSize(body: BasePart): Vector3
-	return Vector3.new(body.Size.X * 0.72, math.max(0.35, body.Size.Y * 0.4), body.Size.Z * 0.72)
+local function sweepSize(body: BasePart, airborne: boolean): Vector3
+	local y = if airborne then math.max(10, body.Size.Y + 6) else math.max(0.35, body.Size.Y * 0.4)
+	return Vector3.new(body.Size.X * 0.72, y, body.Size.Z * 0.72)
 end
 
 local function overlapsWall(at: CFrame, size: Vector3, overlap: OverlapParams): boolean
@@ -117,11 +148,11 @@ local function overlapsWall(at: CFrame, size: Vector3, overlap: OverlapParams): 
 	return false
 end
 
-local function closestWallHit(startCf: CFrame, body: BasePart, movement: Vector3, ray: RaycastParams): RaycastResult?
+local function closestWallHit(startCf: CFrame, body: BasePart, movement: Vector3, ray: RaycastParams, airborne: boolean): RaycastResult?
 	if movement.Magnitude < 0.001 then
 		return nil
 	end
-	local size = sweepSize(body)
+	local size = sweepSize(body, airborne)
 	local maxDist = movement.Magnitude + 0.15
 	local best: RaycastResult? = nil
 	local localOffsets = {
@@ -176,7 +207,7 @@ local function bounceMove(
 	local movement = flatLook * signedStep
 	local startCf = CFrame.lookAt(startPos, startPos + flatLook)
 	local pos = startPos + movement
-	local hit = closestWallHit(startCf, body, movement, ray)
+	local hit = closestWallHit(startCf, body, movement, ray, state.airborne)
 	if hit then
 		local n = inwardNormal(startPos, hit.Position, hit.Normal)
 		if movement.Magnitude > 0.001 then
@@ -193,7 +224,7 @@ local function bounceMove(
 	end
 
 	local proposed = CFrame.lookAt(pos, pos + flatLook)
-	if overlapsWall(proposed, sweepSize(body), overlap) then
+	if overlapsWall(proposed, sweepSize(body, state.airborne), overlap) then
 		if safe then
 			pos = safe.Position
 			local safeLook = flatten(safe.LookVector)
@@ -215,31 +246,9 @@ local function bounceMove(
 	end
 
 	local ground = groundY(model, character, pos)
-	local y = startPos.Y
-	local vy = state.vy
-	if y <= ground + 1.2 then
-		local rise = ground - y
-		if rise > 0 then
-			local climbRate = rise / math.max(dt, 1 / 240)
-			y = ground
-			if climbRate <= 80 then
-				vy = 0
-			else
-				vy = math.min(MAX_LAUNCH, math.max(vy, climbRate))
-			end
-		end
-	end
-	vy -= GRAVITY * dt
-	y += vy * dt
-	if y < ground then
-		y = ground
-		if vy < -BOUNCE_MIN then
-			vy = -vy * LAND_BOUNCE
-		else
-			vy = 0
-		end
-	end
+	local y, vy, inAir = DriveSim.followGround(startPos.Y, state.vy, ground, dt, state.airborne)
 	state.vy = vy
+	state.airborne = inAir
 	pos = Vector3.new(pos.X, y, pos.Z)
 	return pos, flatLook, speed
 end
@@ -253,7 +262,7 @@ local function zeroVelocities(model: Model)
 	end
 end
 
-function DriveSim.step(state: State, model: Model, character: Model?, throttle: number, steer: number, dt: number)
+function DriveSim.step(state: State, model: Model, character: Model?, throttle: number, steer: number, dt: number, jumpWanted: boolean?)
 	local body = model.PrimaryPart
 	if body == nil then
 		return
@@ -285,7 +294,7 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	local pitch = math.atan2(yAhead - yBehind, 10)
 	local travelClimb = if speed >= 0 then pitch else -pitch
 	local gradeMul = 1
-	if travelClimb > 0.02 then
+	if not state.airborne and travelClimb > 0.02 then
 		gradeMul = math.clamp(1 - math.sin(travelClimb), Constants.Track.ClimbMinMul, 1)
 	end
 
@@ -325,7 +334,10 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 		flatLook = flatLook.Unit
 	end
 
-	local yaw = -steer * Constants.Car.TurnSpeed * math.clamp((math.abs(speed) + 10) / 28, 0.4, 1)
+	local yaw = -steer
+		* Constants.Car.TurnSpeed
+		* math.clamp((math.abs(speed) + 10) / 28, 0.4, 1)
+		* (if state.airborne then Constants.Car.AirSteerMul else 1)
 	flatLook = (CFrame.lookAt(Vector3.zero, flatLook) * CFrame.Angles(0, yaw * dt, 0)).LookVector
 	flatLook = Vector3.new(flatLook.X, 0, flatLook.Z)
 	if flatLook.Magnitude < 0.05 then
@@ -335,11 +347,25 @@ function DriveSim.step(state: State, model: Model, character: Model?, throttle: 
 	end
 	flatLook = flatLook.Unit
 
+	if jumpWanted == true and not state.airborne then
+		local takeoff = groundY(model, character, body.Position)
+		if takeoff and (body.Position.Y - takeoff) <= STICK_DOWN then
+			local height = Constants.Car.Height * Constants.Car.JumpHeightFrac
+			height *= math.sqrt(math.clamp(mul, Constants.Items.SlowMul, Constants.Items.BoostMul))
+			state.vy = math.sqrt(2 * GRAVITY * height)
+			state.airborne = true
+		end
+	end
+
 	local pos
 	pos, flatLook, speed = bounceMove(state, body, model, character, flatLook, speed, dt, maxFwd, maxRev)
 	state.speed = speed
 	model:SetAttribute("HudSpeed", math.abs(speed))
-	model:PivotTo(CFrame.lookAt(pos, pos + flatLook, Vector3.yAxis))
+	local look3d = Vector3.new(flatLook.X, math.tan(pitch), flatLook.Z)
+	if look3d.Magnitude < 0.05 then
+		look3d = flatLook
+	end
+	model:PivotTo(CFrame.lookAt(pos, pos + look3d))
 	zeroVelocities(model)
 end
 
