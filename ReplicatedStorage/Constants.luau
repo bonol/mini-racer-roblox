@@ -20,7 +20,7 @@ local Constants = {
 		SpawnHeight = 3.2,
 		Height = 3.2,
 		BodyHover = 1.7,
-		JumpHeightFrac = 1.2,
+		JumpHeightFrac = 2.4,
 		AirSteerMul = 0.35,
 	},
 	Track = {

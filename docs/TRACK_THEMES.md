@@ -2,20 +2,49 @@
 
 The server chooses one track theme for the whole match. A theme begins when the
 next lobby opens, after the previous podium. The course, checkpoint positions,
-and kart physics stay the same; only presentation changes. `MatchService`
+and kart physics stay the same; only presentation changes — including
+**surroundings** (lighting, ground material, world shell). `MatchService`
 includes `themeId` in `RaceStateChanged`, and Workspace carries the
 `MiniRacerThemeId` attribute for other scripts.
+
+`TrackThemes.Order` is `{ Classic, SciFi }`. Classic is a castle village in daylight; SciFi
+is a neon hangar. The list cycles once per completed round.
 
 ## Add a theme
 
 1. Add a theme record to `ReplicatedStorage/TrackThemes.luau` with a unique
-   stable `Id`, display `Name`, `Colors`, `Images`, and six `Sponsors` entries.
-2. Add its ID to `TrackThemes.Order`. The list cycles once per completed round.
-   `Classic` is the only entry until another theme is ready.
+   stable `Id`, display `Name`, `Colors`, `Materials`, `Images`, six
+   `Sponsors`, `Lighting`, optional `Sky`, and `World`.
+2. Add its ID to `TrackThemes.Order`.
 3. Upload images to Roblox and put their `rbxassetid://...` values in the new
-   record. Leave an image ID empty while its artwork is unavailable.
+   record. Leave an image ID empty while its artwork is unavailable. Empty
+   `Sky` faces keep procedural fog/atmosphere (no custom skybox).
 
 Keep theme IDs stable if player-facing UI or analytics begin using them.
+
+## Colors, materials, and the Grass name
+
+Give any part that needs a theme color a `ThemeColorRole` string attribute
+matching a `Colors` key. Existing road, grass, kerbs, barriers, start/finish
+markers, and plaza pads are recolored **and rematerialed** by name.
+
+**Invariant:** off-track tiles stay named `Grass`. DriveSim and bombs only
+treat `Road` and `Grass` as ground. Change `Colors.Grass` and
+`Materials.Grass` (green grounds, diamond-plate deck, …) — do not rename
+the parts.
+
+`ThemeService.apply` also writes `Lighting` (`ClockTime`, brightness, ambient,
+fog) and an `Atmosphere` / `Sky`. World-shell parts are named `WorldShell`
+(not `Barrier`) so DriveSim ignores them. They do not collide.
+
+## World shell and gates
+
+`World.Gate` is `Castle` or `Portal`. `ThemeService.apply` calls
+`TrackService.applyThemeWorld`, which rebuilds `ThemeDecor` (gate + boards)
+and `ThemeWorld` (curtain strips on `offsetLoop` at `half + ShellOffset`,
+height `ShellHeight`) without destroying the road or `BarrierWall`.
+
+No roof over the circuit (chase camera). Horizon is curtain + sky.
 
 ## Image slots for track decoration
 
@@ -30,15 +59,10 @@ artwork to change with the theme.
 The theme service sets the image and hides the slot when its asset ID is empty.
 
 Place banner faces and other decoration in `MiniRacerTrack`, `KartPlaza`, or
-`KartGrid`. Give any part that needs a theme color a `ThemeColorRole` string
-attribute matching a `Colors` key. Existing road, grass, kerbs, barriers,
-start/finish markers, and plaza pads are recolored by name. The generated
-kerbs also carry `ThemeIndex` for alternating colors.
+`KartGrid`. Theme image slots can be added after startup; the service applies
+the active theme when the tag appears.
 
-Theme image slots can be added after startup; the service applies the active
-theme when the tag appears. Rebuilt track/plaza folders are also recolored.
-
-## Classic artwork and first Studio test
+## Classic artwork
 
 The PNG sources are in `assets/track-themes/classic/`. Import them as images
 through Studio's Asset Manager, then paste each returned `rbxassetid://...`
@@ -59,12 +83,8 @@ value into the matching `Classic` entry in `TrackThemes.luau`:
 | `Sponsors.PlazaPitstop` | `sponsor-plaza-pitstop.png` | `rbxassetid://76845063427534` |
 | `Sponsors.BombBox` | `sponsor-bomb-box.png` | `rbxassetid://140586940348473` |
 
-The procedural track creates image slots on inward-facing barriers, the
-start stripe, a deep S/F **castle gatehouse** (four towers, wing turrets, keep
-and spire, tapestries), two extra finish boards, and each of the six sponsor
-arts **three times** around the lap. Trackside boards are **168 × 30** with
-gold frames. Gate clearance is **32** studs. Chevrons still need corner
-placement.
-
-Boards do not collide with cars. Until a second theme is added, Classic
-art appears every round.
+Classic S/F is the castle gatehouse (clearance **32**). SciFi S/F is a neon
+portal with the same clearance. Trackside boards are **168 × 30**, each
+sponsor ×3 around the lap. Chevrons still need corner placement. Boards do
+not collide with cars. SciFi barrier/finish/chevron image slots are empty
+until those assets exist; lighting and the hangar shell still sell the world.

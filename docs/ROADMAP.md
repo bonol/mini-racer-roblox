@@ -22,7 +22,7 @@ v2 leftover (still this version, not v3 gameplay):
 
 - Track should look good (same racing line; presentation, not a new circuit)
 - **Car:** new bodies/models in the plaza; same `DriveSim`. No in-game character editor (Roblox avatar as spawned)
-- Track **theme can change per round** (`ThemeService` already cycles; only `Classic` exists and image slots are empty)
+- Track **theme can change per round** (`Classic` castle grounds and `SciFi` neon hangar). Surroundings (sky/fog, ground material, world shell) are part of the theme; same racing line.
 
 Deferred: 20 laps. After v3: DataStore, ranked, ghosts, extra *courses*, private servers.
 
@@ -101,8 +101,8 @@ All five phases are **implemented**. Catalogs in `docs/v2/` are historical (they
 **Attachments**
 
 - Booster: cost **20**; **1.5×** speed for **3s**; does not stack with itself
-- Bomb: cost **10**; Q drops a neon bomb; anyone within **7** studs XZ and **10%** of kart height above the road is slowed **0.7×** for **3s**, including the dropper. A timed Space hop (peak **~1.2×** kart height) clears it
-- Space hops the kart (does not eject). Air travel uses gravity; boost/slow and slopes change hang/distance. Invisible `BarrierWall` on the rails (`BarrierWallHeight = 28`) keeps hops on the circuit; visual rails stay 6
+- Bomb: cost **10**; Q drops a neon bomb; anyone within **7** studs XZ and **10%** of kart height above the road is slowed **0.7×** for **3s**, including the dropper. A timed Space hop (peak **~2.4×** kart height) clears it
+- Space hops the kart (does not eject). Peak ≈ **7.7 studs**. Air travel uses gravity; boost/slow and slopes change hang/distance. Chase cam follows only **35%** of hop lift so jumps read while racing. Invisible `BarrierWall` on the rails (`BarrierWallHeight = 28`) keeps hops on the circuit; visual rails stay 6
 - Slow and boost: if both apply, **slow wins** until it expires
 - Checkpoint pickup: 1 live pickup per checkpoint; random Booster or Bomb; cannot vacuum the same pad twice in one pass
 
@@ -119,6 +119,12 @@ All five phases are **implemented**. Catalogs in `docs/v2/` are historical (they
 - Play-verify on **Mini Racer [testing]**, PlaceId `98798376352087` (not PlaceId 0 / `.rbxlx`)
 - Keep the Toolbox ids in `Constants.Audio` (11 clips: two backgrounds, LastLap, BoostUse, BombDrop); do not swap for generic packs
 - Do not rewrite the kart / `DriveSim` controller (hop is an add-on to the same integrator)
+
+**Theme**
+
+- `TrackThemes.Order = { Classic, SciFi }`. `ThemeService.nextRound()` runs at each new lobby
+- Surroundings are part of the theme: lighting/atmosphere, ground **material** (tiles stay named `Grass`), non-collide world shell. No roof. Same centerline
+- Classic: castle gate, green grounds, daylight village square (keep, cottages, trees, picket fences), stone curtain. SciFi: portal gate, metal deck, **lit** night/neon (shell + plaza lights), hangar curtain
 
 ---
 
@@ -148,7 +154,7 @@ What already exists to build on:
 
 - Kart: 6 palettes at **Selecting** only (`KartPrototype`). Locked until next round. **v3 adds bodies/models**, same physics.
 - Character: Roblox avatar as spawned. **No v3 editor.**
-- Theme: `ThemeService` recolors the generated track and applies tagged decals; `nextRound()` already runs at lobby. **Classic** IDs are filled. Trackside banners are 168×30, each art ×3 around the lap; S/F gantry is 90 tall. Chevrons unplaced. Only Classic is in `TrackThemes.Order`.
+- Theme: `ThemeService` recolors/rematerials the generated track, applies tagged decals, sets lighting, and rebuilds `ThemeDecor` + `ThemeWorld`. **Classic** (castle grounds) and **SciFi** (neon hangar) rotate at lobby. Trackside banners are 168×30, each art ×3 around the lap. Chevrons unplaced.
 
 Pillars:
 

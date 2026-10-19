@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Remotes"))
+local Constants = require(game:GetService("ReplicatedStorage"):WaitForChild("Constants"))
 
 local CameraController = {}
 
@@ -12,6 +13,29 @@ local LOOK_AHEAD = 12
 local LOOK_HEIGHT = 2
 local ORIGIN_HEIGHT = 5
 local DIST_RATE = 16
+-- Chase cam only follows this much of a hop so the kart pops in frame.
+local HOP_CAM_FOLLOW = 0.35
+
+local function roadY(from: Vector3, params: RaycastParams): number?
+	local origin = from + Vector3.new(0, 12, 0)
+	local remaining = 80
+	for _ = 1, 8 do
+		if remaining < 2 then
+			return nil
+		end
+		local hit = Workspace:Raycast(origin, Vector3.new(0, -remaining, 0), params)
+		if hit == nil then
+			return nil
+		end
+		local name = hit.Instance.Name
+		if name == "Road" or name == "Grass" then
+			return hit.Position.Y
+		end
+		origin = hit.Position + Vector3.new(0, -0.15, 0)
+		remaining -= math.max(hit.Distance, 0.15) + 0.15
+	end
+	return nil
+end
 
 local function expAlpha(rate: number, dt: number): number
 	return 1 - math.exp(-rate * math.clamp(dt, 1 / 240, 1 / 20))
@@ -79,13 +103,18 @@ function CameraController.start()
 			camDist = FOLLOW_BEHIND
 		end
 
-		local origin = root.Position + Vector3.new(0, ORIGIN_HEIGHT, 0)
-		local desired = origin - look * FOLLOW_BEHIND + Vector3.new(0, FOLLOW_HEIGHT, 0)
 		local exclude: { Instance } = { car }
 		if character then
 			table.insert(exclude, character)
 		end
 		params.FilterDescendantsInstances = exclude
+		local ground = roadY(root.Position, params)
+		local hop = 0
+		if ground then
+			hop = math.max(0, root.Position.Y - (ground + Constants.Car.BodyHover))
+		end
+		local origin = root.Position + Vector3.new(0, ORIGIN_HEIGHT - hop * (1 - HOP_CAM_FOLLOW), 0)
+		local desired = origin - look * FOLLOW_BEHIND + Vector3.new(0, FOLLOW_HEIGHT, 0)
 		local hit = Workspace:Raycast(origin, desired - origin, params)
 		local targetDist = FOLLOW_BEHIND
 		if hit then

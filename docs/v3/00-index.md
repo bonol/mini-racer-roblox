@@ -30,9 +30,9 @@ Open: how many bodies, who models them, whether paddock shows one of each body o
 
 Already wired: `ThemeService.nextRound()` on each new lobby; `themeId` on `RaceStateChanged`; tagged decals + `ThemeColorRole`.
 
-Classic IDs are filled (large repeating banners). `TrackThemes.Order` is still `{ Classic }`, so rounds look the same until a second theme exists.
+Classic IDs are filled (large repeating banners). `TrackThemes.Order` is `{ Classic, SciFi }`. Surroundings (lighting, ground material, world shell) are part of the theme. SciFi barrier/finish art slots can stay empty until those PNGs exist.
 
-v3 needs **at least two** filled themes so a second lobby is obviously a different meeting.
+Classic lobby is a daylight village square (keep, cottages, trees, fences). v3 still needs **kart bodies**; two meetings already look different after podium.
 
 ## Suggested slice order (draft)
 

@@ -12,6 +12,12 @@ Play: Playtesters | other Studio | skipped (MCP down) — one-line evidence
 
 ---
 
+## 2026-10-19 — Daylight castle village and a hop that reads on camera
+
+What: Classic lobby is a clear afternoon village (keep, cottages, trees, pickets) instead of a blown-out limestone lot. Space hop is 2.4× kart height; chase cam follows only 35% of the lift.
+
+Play: Playtesters (`98798376352087`) — Classic Clock 14.6 / exposure −0.35, keep + 4 cottages; Racing seated hop peaked ~7.3 studs with camera follow 0.35.
+
 ## 2026-10-19 — Hop the kart, keep it on the circuit
 
 What: Space hops the kart (~1.2× height) with gravity; bombs use a 10% Y slab; downhill boost no longer flies. Invisible 28-stud BarrierWall on the rails so hops cannot leave the circuit.

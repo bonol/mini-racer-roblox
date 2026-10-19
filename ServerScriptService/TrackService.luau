@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 
 local Constants = require(game:GetService("ReplicatedStorage"):WaitForChild("Constants"))
+local TrackThemes = require(game:GetService("ReplicatedStorage"):WaitForChild("TrackThemes"))
 
 local TrackService = {}
 
@@ -400,9 +401,13 @@ local BOARD_HEIGHT = 10 * 3
 
 local STONE = Color3.fromRGB(214, 190, 148)
 local STONE_DARK = Color3.fromRGB(156, 134, 106)
-local ROOF = Color3.fromRGB(118, 52, 138)
+local ROOF = Color3.fromRGB(196, 52, 48)
 local GOLD = Color3.fromRGB(210, 162, 58)
 local WINDOW = Color3.fromRGB(48, 36, 72)
+local TREE_TRUNK = Color3.fromRGB(118, 82, 48)
+local TREE_LEAF = Color3.fromRGB(46, 128, 52)
+local TREE_LEAF_DARK = Color3.fromRGB(28, 92, 40)
+local PICKET = Color3.fromRGB(248, 248, 242)
 
 local GATE_CLEARANCE = 32
 local TOWER_H = 108
@@ -423,6 +428,15 @@ local function decorPart(props: { [string]: any }, role: string): Part
 	local instance = part(props)
 	instance:SetAttribute("ThemeColorRole", role)
 	return instance
+end
+
+local function addPointLight(host: BasePart, color: Color3, brightness: number, range: number)
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Brightness = brightness
+	light.Range = range
+	light.Shadows = false
+	light.Parent = host
 end
 
 local function uprightCylinder(
@@ -739,7 +753,705 @@ local function buildCastleGate(parent: Instance, stripe: CFrame, width: number)
 	themeDecal(backTapestry, Enum.NormalId.Back, "FinishBanner")
 end
 
-local function buildThemeDecor(model: Model, centerline: { Vector3 }, stripe: CFrame, width: number)
+local function buildPortalGate(parent: Instance, stripe: CFrame, width: number)
+	local pylonX = width * 0.5 + 10
+	local pylonH = 72
+	local ringT = 6
+	local glowH = GATE_CLEARANCE + 8
+
+	for _, side in { -1, 1 } do
+		decorPart({
+			Name = "PortalPylon",
+			Size = Vector3.new(12, pylonH, 16),
+			CFrame = stripe * CFrame.new(side * pylonX, pylonH * 0.5, 0),
+			Color = Color3.fromRGB(36, 44, 58),
+			Material = Enum.Material.Metal,
+			Parent = parent,
+		}, "SciHull")
+		decorPart({
+			Name = "PortalTrim",
+			Size = Vector3.new(2.2, pylonH, 18),
+			CFrame = stripe * CFrame.new(side * (pylonX - 6), pylonH * 0.5, 0),
+			Color = Color3.fromRGB(0, 230, 255),
+			Material = Enum.Material.Neon,
+			Parent = parent,
+		}, "SciAccent")
+		decorPart({
+			Name = "PortalCap",
+			Size = Vector3.new(16, 8, 20),
+			CFrame = stripe * CFrame.new(side * pylonX, pylonH + 2, 0),
+			Color = Color3.fromRGB(90, 40, 255),
+			Material = Enum.Material.Neon,
+			Parent = parent,
+		}, "SciGlow")
+	end
+
+	decorPart({
+		Name = "PortalLintel",
+		Size = Vector3.new(width + 28, ringT, 18),
+		CFrame = stripe * CFrame.new(0, GATE_CLEARANCE + ringT * 0.5, 0),
+		Color = Color3.fromRGB(36, 44, 58),
+		Material = Enum.Material.Metal,
+		Parent = parent,
+	}, "SciHull")
+	decorPart({
+		Name = "PortalLintelGlow",
+		Size = Vector3.new(width + 8, 2.4, 20),
+		CFrame = stripe * CFrame.new(0, GATE_CLEARANCE + 1.4, 0),
+		Color = Color3.fromRGB(0, 230, 255),
+		Material = Enum.Material.Neon,
+		Parent = parent,
+	}, "SciAccent")
+	decorPart({
+		Name = "PortalVeil",
+		Size = Vector3.new(width - 4, glowH, 1.2),
+		CFrame = stripe * CFrame.new(0, glowH * 0.5, 0),
+		Color = Color3.fromRGB(90, 40, 255),
+		Material = Enum.Material.Neon,
+		Transparency = 0.72,
+		Parent = parent,
+	}, "SciGlow")
+	local banner = decorPart({
+		Name = "FinishArchBanner",
+		Size = Vector3.new(width - 18, 14, 1.4),
+		CFrame = stripe * CFrame.new(0, GATE_CLEARANCE + ringT + 8, -10),
+		Color = Color3.fromRGB(0, 255, 220),
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+	themeDecal(banner, Enum.NormalId.Front, "FinishBanner")
+	themeDecal(banner, Enum.NormalId.Back, "FinishBanner")
+
+	for _, side in { -1, 1 } do
+		local lamp = decorPart({
+			Name = "PortalLamp",
+			Size = Vector3.new(4, 4, 4),
+			CFrame = stripe * CFrame.new(side * (pylonX - 8), 18, 10),
+			Color = Color3.fromRGB(0, 230, 255),
+			Material = Enum.Material.Neon,
+			Parent = parent,
+		}, "SciAccent")
+		addPointLight(lamp, Color3.fromRGB(0, 230, 255), 3.2, 48)
+		local lampM = decorPart({
+			Name = "PortalLamp",
+			Size = Vector3.new(3.2, 3.2, 3.2),
+			CFrame = stripe * CFrame.new(side * (pylonX - 8), 40, -8),
+			Color = Color3.fromRGB(180, 60, 255),
+			Material = Enum.Material.Neon,
+			Parent = parent,
+		}, "SciGlow")
+		addPointLight(lampM, Color3.fromRGB(180, 60, 255), 2.4, 40)
+	end
+	local crown = decorPart({
+		Name = "PortalCrown",
+		Size = Vector3.new(width + 20, 3, 6),
+		CFrame = stripe * CFrame.new(0, GATE_CLEARANCE + 22, 0),
+		Color = Color3.fromRGB(0, 255, 220),
+		Material = Enum.Material.Neon,
+		Parent = parent,
+	}, "SciAccent")
+	addPointLight(crown, Color3.fromRGB(80, 220, 255), 2.8, 56)
+end
+
+local function placeWorldStrip(
+	points: { Vector3 },
+	sizeX: number,
+	sizeY: number,
+	y: number,
+	color: Color3,
+	material: Enum.Material,
+	extra: number,
+	parent: Instance,
+	role: string,
+	stripe: CFrame
+)
+	local created = 0
+	for i = 1, #points do
+		local a = points[i]
+		local b = wrap(points, i + 1)
+		local yA = a.Y + y
+		local yB = b.Y + y
+		local dx, dy, dz = b.X - a.X, yB - yA, b.Z - a.Z
+		local len = math.sqrt(dx * dx + dy * dy + dz * dz)
+		if len < 0.45 then
+			continue
+		end
+		local mid = Vector3.new((a.X + b.X) * 0.5, (yA + yB) * 0.5, (a.Z + b.Z) * 0.5)
+		local localMid = stripe:PointToObjectSpace(mid)
+		if math.abs(localMid.Z) < 52 then
+			continue
+		end
+		local segment = decorPart({
+			Name = "WorldShell",
+			Size = Vector3.new(sizeX, sizeY, len + extra),
+			CFrame = CFrame.lookAt(mid, Vector3.new(b.X, yB, b.Z)),
+			Color = color,
+			Material = material,
+			Parent = parent,
+		}, role)
+		segment.CastShadow = true
+		created += 1
+		if created % 40 == 0 then
+			task.wait()
+		end
+	end
+end
+
+local function dressShell(points: { Vector3 }, inwardSign: number, parent: Instance, stripe: CFrame, theme, height: number)
+	local portal = theme.World.Gate == "Portal"
+	local step = if portal then 6 else 8
+	local cyan = Color3.fromRGB(0, 230, 255)
+	local mag = Color3.fromRGB(180, 60, 255)
+	local flame = Color3.fromRGB(255, 150, 60)
+	for i = 1, #points, step do
+		local a = points[i]
+		local b = wrap(points, i + 1)
+		local mid = Vector3.new((a.X + b.X) * 0.5, (a.Y + b.Y) * 0.5, (a.Z + b.Z) * 0.5)
+		if math.abs(stripe:PointToObjectSpace(mid).Z) < 52 then
+			continue
+		end
+		local look = heading(a, b)
+		if look.Magnitude < 0.05 then
+			continue
+		end
+		local inward = leftNormal(look) * inwardSign
+		local at = mid + inward * 8
+		local face = CFrame.lookAt(at, at + inward)
+		if portal then
+			local accent = math.floor(i / step) % 2 == 0
+			local bar = decorPart({
+				Name = "NeonTrim",
+				Size = Vector3.new(1.4, 2.2, 14),
+				CFrame = face * CFrame.new(0, 14, 0),
+				Color = if accent then cyan else mag,
+				Material = Enum.Material.Neon,
+				Parent = parent,
+			}, if accent then "SciAccent" else "SciGlow")
+			addPointLight(bar, bar.Color, 2.6, 40)
+			local high = decorPart({
+				Name = "NeonTrim",
+				Size = Vector3.new(1.2, 1.6, 12),
+				CFrame = face * CFrame.new(0, 42, 0),
+				Color = if accent then mag else cyan,
+				Material = Enum.Material.Neon,
+				Parent = parent,
+			}, "SciGlow")
+			addPointLight(high, high.Color, 1.8, 30)
+			local pad = decorPart({
+				Name = "RunwayLight",
+				Size = Vector3.new(1.8, 0.45, 1.8),
+				CFrame = face * CFrame.new(0, 1.15, 7),
+				Color = cyan,
+				Material = Enum.Material.Neon,
+				Parent = parent,
+			}, "SciAccent")
+			addPointLight(pad, cyan, 1.4, 18)
+		else
+			decorPart({
+				Name = "CastleMerlon",
+				Size = Vector3.new(5.5, 8, 8),
+				CFrame = CFrame.new(mid + Vector3.new(0, height + 3, 0)) * (face - face.Position),
+				Color = Color3.fromRGB(214, 190, 148),
+				Parent = parent,
+			}, "CastleStone")
+			decorPart({
+				Name = "CastleTorch",
+				Size = Vector3.new(0.7, 12, 0.7),
+				CFrame = face * CFrame.new(0, 7, 0),
+				Color = Color3.fromRGB(156, 134, 106),
+				Parent = parent,
+			}, "CastleStoneDark")
+			local bowl = part({
+				Name = "CastleFlame",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.new(2.2, 2.2, 2.2),
+				CFrame = face * CFrame.new(0, 14.2, 0),
+				Color = flame,
+				Material = Enum.Material.Neon,
+				CanCollide = false,
+				CanQuery = false,
+				Parent = parent,
+			})
+			addPointLight(bowl, flame, 1.1, 20)
+			if math.floor(i / step) % 2 == 0 then
+				local tapestry = decorPart({
+					Name = "CourtyardBanner",
+					Size = Vector3.new(10, 18, 0.55),
+					CFrame = face * CFrame.new(0, 22, 0),
+					Color = ROOF,
+					Material = Enum.Material.SmoothPlastic,
+					Parent = parent,
+				}, "CastleRoof")
+				themeDecal(tapestry, Enum.NormalId.Front, "FinishBanner")
+				themeDecal(tapestry, Enum.NormalId.Back, "FinishBanner")
+			end
+		end
+		if i % (step * 4) == 1 then
+			task.wait()
+		end
+	end
+end
+
+local function freePart(props: { [string]: any }): Part
+	props.CanCollide = false
+	props.CanQuery = false
+	return part(props)
+end
+
+local function placeTree(parent: Instance, at: CFrame, scale: number)
+	freePart({
+		Name = "VillageTrunk",
+		Size = Vector3.new(1.5 * scale, 7 * scale, 1.5 * scale),
+		CFrame = at * CFrame.new(0, 3.5 * scale, 0),
+		Color = TREE_TRUNK,
+		Material = Enum.Material.Wood,
+		Parent = parent,
+	})
+	freePart({
+		Name = "VillageCanopy",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(9, 9, 9) * scale,
+		CFrame = at * CFrame.new(0, 8.4 * scale, 0),
+		Color = TREE_LEAF,
+		Material = Enum.Material.Grass,
+		Parent = parent,
+	})
+	freePart({
+		Name = "VillageCanopy",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(6.4, 6.4, 6.4) * scale,
+		CFrame = at * CFrame.new(2.1 * scale, 10.4 * scale, 1.2 * scale),
+		Color = TREE_LEAF_DARK,
+		Material = Enum.Material.Grass,
+		Parent = parent,
+	})
+end
+
+local function placeFlower(parent: Instance, at: CFrame, color: Color3)
+	freePart({
+		Name = "VillageStem",
+		Size = Vector3.new(0.28, 1.5, 0.28),
+		CFrame = at * CFrame.new(0, 0.95, 0),
+		Color = Color3.fromRGB(40, 110, 48),
+		Material = Enum.Material.Grass,
+		Parent = parent,
+	})
+	freePart({
+		Name = "VillageFlower",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(1.15, 1.15, 1.15),
+		CFrame = at * CFrame.new(0, 1.75, 0),
+		Color = color,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	})
+end
+
+local function placeLampPost(parent: Instance, at: CFrame)
+	decorPart({
+		Name = "VillageLampPole",
+		Size = Vector3.new(0.55, 14, 0.55),
+		CFrame = at * CFrame.new(0, 7, 0),
+		Color = Color3.fromRGB(70, 70, 78),
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "CastleStoneDark")
+	decorPart({
+		Name = "VillageLampArm",
+		Size = Vector3.new(3.2, 0.4, 0.4),
+		CFrame = at * CFrame.new(1.4, 13.6, 0),
+		Color = Color3.fromRGB(70, 70, 78),
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "CastleStoneDark")
+	local globe = freePart({
+		Name = "VillageLamp",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(1.6, 1.6, 1.6),
+		CFrame = at * CFrame.new(2.6, 13.2, 0),
+		Color = Color3.fromRGB(255, 226, 160),
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	})
+	addPointLight(globe, Color3.fromRGB(255, 220, 160), 0.55, 14)
+end
+
+local function placePicketRun(parent: Instance, origin: CFrame, x: number, z0: number, z1: number)
+	local a = math.min(z0, z1)
+	local b = math.max(z0, z1)
+	for z = a, b, 3.4 do
+		freePart({
+			Name = "VillagePicket",
+			Size = Vector3.new(0.38, 2.5, 0.38),
+			CFrame = origin * CFrame.new(x, 1.45, z),
+			Color = PICKET,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		})
+	end
+	freePart({
+		Name = "VillageRail",
+		Size = Vector3.new(0.26, 0.28, math.abs(z1 - z0) + 0.8),
+		CFrame = origin * CFrame.new(x, 1.65, (z0 + z1) * 0.5),
+		Color = PICKET,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	})
+end
+
+local function placeCottage(parent: Instance, origin: CFrame, x: number, z: number, facePositiveZ: boolean)
+	local yaw = if facePositiveZ then 0 else math.pi
+	local cf = origin * CFrame.new(x, 0, z) * CFrame.Angles(0, yaw, 0)
+	decorPart({
+		Name = "VillageHouse",
+		Size = Vector3.new(16, 12, 12),
+		CFrame = cf * CFrame.new(0, 7, 0),
+		Color = Color3.fromRGB(232, 214, 176),
+		Parent = parent,
+	}, "CastleStone")
+	decorPart({
+		Name = "VillageRoof",
+		Size = Vector3.new(18, 2.6, 14),
+		CFrame = cf * CFrame.new(0, 14.1, 0),
+		Color = ROOF,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "CastleRoof")
+	decorPart({
+		Name = "VillageRoof",
+		Size = Vector3.new(12, 3.4, 14),
+		CFrame = cf * CFrame.new(0, 16.8, 0),
+		Color = ROOF,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "CastleRoof")
+	decorPart({
+		Name = "VillageChimney",
+		Size = Vector3.new(2.4, 6, 2.4),
+		CFrame = cf * CFrame.new(-5, 17.2, -2),
+		Color = STONE_DARK,
+		Parent = parent,
+	}, "CastleStoneDark")
+	decorPart({
+		Name = "VillageDoor",
+		Size = Vector3.new(3.2, 6.2, 0.5),
+		CFrame = cf * CFrame.new(0, 4.1, 6.2),
+		Color = Color3.fromRGB(120, 72, 42),
+		Material = Enum.Material.Wood,
+		Parent = parent,
+	}, "CastleStoneDark")
+	for _, xOff in { -4.2, 4.2 } do
+		decorPart({
+			Name = "VillageWindow",
+			Size = Vector3.new(2.6, 3.2, 0.45),
+			CFrame = cf * CFrame.new(xOff, 8.4, 6.2),
+			Color = WINDOW,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "CastleWindow")
+	end
+	decorPart({
+		Name = "VillageFlagPole",
+		Size = Vector3.new(0.35, 8, 0.35),
+		CFrame = cf * CFrame.new(6.5, 20, 0),
+		Color = GOLD,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "Arch")
+	decorPart({
+		Name = "VillageFlag",
+		Size = Vector3.new(4.4, 2.2, 0.22),
+		CFrame = cf * CFrame.new(8.6, 22.4, 0),
+		Color = ROOF,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "CastleRoof")
+end
+
+local function placeKeepTower(parent: Instance, stripe: CFrame, x: number, z: number, height: number, width: number, withFlag: boolean)
+	decorPart({
+		Name = "PlazaKeepTower",
+		Size = Vector3.new(width, height, width),
+		CFrame = stripe * CFrame.new(x, height * 0.5, z),
+		Color = STONE,
+		Parent = parent,
+	}, "CastleStone")
+	for i = 1, 5 do
+		local t = (i - 1) / 4
+		local s = math.max((width + 6) * (1 - t * 0.88), 2.4)
+		decorPart({
+			Name = "PlazaKeepRoof",
+			Size = Vector3.new(s, 4, s),
+			CFrame = stripe * CFrame.new(x, height + 1.6 + (i - 1) * 3.5, z),
+			Color = ROOF,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "CastleRoof")
+	end
+	if withFlag then
+		decorPart({
+			Name = "PlazaKeepFlagPole",
+			Size = Vector3.new(0.4, 12, 0.4),
+			CFrame = stripe * CFrame.new(x, height + 24, z),
+			Color = GOLD,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "Arch")
+		decorPart({
+			Name = "PlazaKeepFlag",
+			Size = Vector3.new(7.5, 3.4, 0.28),
+			CFrame = stripe * CFrame.new(x + 3.8, height + 28, z),
+			Color = ROOF,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "CastleRoof")
+	end
+	for _, yOff in { height * 0.28, height * 0.55 } do
+		decorPart({
+			Name = "PlazaKeepWindow",
+			Size = Vector3.new(0.5, 5, 3.2),
+			CFrame = stripe * CFrame.new(x + width * 0.5, yOff, z),
+			Color = WINDOW,
+			Material = Enum.Material.SmoothPlastic,
+			Parent = parent,
+		}, "CastleWindow")
+	end
+end
+
+local function placePlazaKeep(parent: Instance, stripe: CFrame)
+	local x = -152
+	local z = 18
+	decorPart({
+		Name = "PlazaKeep",
+		Size = Vector3.new(24, 42, 36),
+		CFrame = stripe * CFrame.new(x, 22, z),
+		Color = STONE,
+		Parent = parent,
+	}, "CastleStone")
+	decorPart({
+		Name = "PlazaKeepDoor",
+		Size = Vector3.new(0.7, 16, 10),
+		CFrame = stripe * CFrame.new(x + 12.2, 9, z),
+		Color = WINDOW,
+		Material = Enum.Material.SmoothPlastic,
+		Parent = parent,
+	}, "CastleWindow")
+	for _, zOff in { -10, 0, 10 } do
+		for _, yOff in { 18, 30 } do
+			decorPart({
+				Name = "PlazaKeepWindow",
+				Size = Vector3.new(0.55, 5.5, 3.6),
+				CFrame = stripe * CFrame.new(x + 12.2, yOff, z + zOff),
+				Color = WINDOW,
+				Material = Enum.Material.SmoothPlastic,
+				Parent = parent,
+			}, "CastleWindow")
+		end
+	end
+	for mx = -8, 8, 8 do
+		decorPart({
+			Name = "PlazaKeepMerlon",
+			Size = Vector3.new(5, 7, 6),
+			CFrame = stripe * CFrame.new(x + mx, 46, z + 16),
+			Color = STONE,
+			Parent = parent,
+		}, "CastleStone")
+		decorPart({
+			Name = "PlazaKeepMerlon",
+			Size = Vector3.new(5, 7, 6),
+			CFrame = stripe * CFrame.new(x + mx, 46, z - 16),
+			Color = STONE,
+			Parent = parent,
+		}, "CastleStone")
+	end
+	placeKeepTower(parent, stripe, x - 10, z - 20, 54, 14, true)
+	placeKeepTower(parent, stripe, x - 10, z + 20, 54, 14, true)
+	placeKeepTower(parent, stripe, x + 2, z, 70, 12, true)
+	freePart({
+		Name = "VillageHill",
+		Size = Vector3.new(70, 20, 90),
+		CFrame = stripe * CFrame.new(x - 36, 6, z),
+		Color = Color3.fromRGB(86, 150, 62),
+		Material = Enum.Material.Grass,
+		Parent = parent,
+	})
+	freePart({
+		Name = "VillageHill",
+		Size = Vector3.new(40, 14, 36),
+		CFrame = stripe * CFrame.new(x - 28, 10, z - 38),
+		Color = Color3.fromRGB(64, 132, 52),
+		Material = Enum.Material.Grass,
+		Parent = parent,
+	})
+end
+
+local function dressPlaza(parent: Instance, stripe: CFrame, theme)
+	local origin = stripe * CFrame.new(-92, 0, 18)
+	if theme.World.Gate == "Portal" then
+		local spots = {
+			Vector3.new(-18, 0, -22),
+			Vector3.new(18, 0, -22),
+			Vector3.new(-18, 0, 22),
+			Vector3.new(18, 0, 22),
+		}
+		for i, off in spots do
+			decorPart({
+				Name = "PlazaPylon",
+				Size = Vector3.new(3, 22, 3),
+				CFrame = origin * CFrame.new(off.X, 12, off.Z),
+				Color = Color3.fromRGB(36, 44, 58),
+				Material = Enum.Material.Metal,
+				Parent = parent,
+			}, "SciHull")
+			local cap = decorPart({
+				Name = "PlazaPylonCap",
+				Size = Vector3.new(4.2, 2.2, 4.2),
+				CFrame = origin * CFrame.new(off.X, 24, off.Z),
+				Color = if i % 2 == 0 then Color3.fromRGB(180, 60, 255) else Color3.fromRGB(0, 230, 255),
+				Material = Enum.Material.Neon,
+				Parent = parent,
+			}, if i % 2 == 0 then "SciGlow" else "SciAccent")
+			addPointLight(cap, cap.Color, 3.4, 44)
+		end
+		local ring = decorPart({
+			Name = "HoloRing",
+			Size = Vector3.new(16, 0.55, 16),
+			CFrame = origin * CFrame.new(0, 1.55, 0),
+			Color = Color3.fromRGB(90, 40, 255),
+			Material = Enum.Material.Neon,
+			Parent = parent,
+		}, "SciGlow")
+		addPointLight(ring, Color3.fromRGB(140, 80, 255), 2.2, 28)
+		return
+	end
+
+	placePlazaKeep(parent, stripe)
+	placeCottage(parent, origin, -36, -50, true)
+	placeCottage(parent, origin, -14, -52, true)
+	placeCottage(parent, origin, -36, 50, false)
+	placeCottage(parent, origin, -12, 52, false)
+
+	placeTree(parent, origin * CFrame.new(-48, 0, -36), 1.15)
+	placeTree(parent, origin * CFrame.new(-50, 0, 34), 1.25)
+	placeTree(parent, origin * CFrame.new(24, 0, -44), 1)
+	placeTree(parent, origin * CFrame.new(26, 0, 44), 1.1)
+	placeTree(parent, origin * CFrame.new(-8, 0, -48), 0.85)
+	placeTree(parent, origin * CFrame.new(-6, 0, 48), 0.9)
+	placeTree(parent, origin * CFrame.new(-58, 0, -8), 1.35)
+
+	placePicketRun(parent, origin, -46, -40, 40)
+	placePicketRun(parent, origin, 26, -44, -20)
+	placePicketRun(parent, origin, 26, 20, 44)
+
+	placeLampPost(parent, origin * CFrame.new(-26, 0, -42))
+	placeLampPost(parent, origin * CFrame.new(-26, 0, 42))
+	placeLampPost(parent, origin * CFrame.new(24, 0, -42))
+	placeLampPost(parent, origin * CFrame.new(24, 0, 42))
+
+	local flowerColors = {
+		Color3.fromRGB(255, 214, 64),
+		Color3.fromRGB(228, 64, 64),
+		Color3.fromRGB(245, 245, 250),
+		Color3.fromRGB(255, 150, 40),
+	}
+	for i = -8, 8 do
+		local color = flowerColors[(i % #flowerColors) + 1]
+		placeFlower(parent, origin * CFrame.new(-44, 0, i * 4.2), color)
+		placeFlower(parent, origin * CFrame.new(-42 + (i % 2) * 1.6, 0, -44 + i * 0.2), color)
+	end
+	for _, z in { -46, 46 } do
+		for i = -4, 2 do
+			placeFlower(parent, origin * CFrame.new(-20 + i * 4, 0, z), flowerColors[(i % #flowerColors) + 1])
+		end
+	end
+
+	decorPart({
+		Name = "PlazaWell",
+		Size = Vector3.new(8, 2.4, 8),
+		CFrame = origin * CFrame.new(8, 1.4, -38),
+		Color = STONE_DARK,
+		Parent = parent,
+	}, "CastleStoneDark")
+	freePart({
+		Name = "PlazaWellWater",
+		Size = Vector3.new(5.5, 0.8, 5.5),
+		CFrame = origin * CFrame.new(8, 2.3, -38),
+		Color = Color3.fromRGB(70, 120, 160),
+		Material = Enum.Material.Glass,
+		Transparency = 0.3,
+		Parent = parent,
+	})
+	for _, z in { -34, 34 } do
+		decorPart({
+			Name = "PlazaBench",
+			Size = Vector3.new(10, 1.4, 2.4),
+			CFrame = origin * CFrame.new(-30, 1.8, z),
+			Color = STONE_DARK,
+			Parent = parent,
+		}, "CastleStoneDark")
+		decorPart({
+			Name = "PlazaBenchBack",
+			Size = Vector3.new(10, 2.2, 0.55),
+			CFrame = origin * CFrame.new(-31.2, 3.2, z),
+			Color = STONE,
+			Parent = parent,
+		}, "CastleStone")
+	end
+end
+
+local function buildThemeWorld(model: Model, centerline: { Vector3 }, stripe: CFrame, width: number, theme)
+	local existing = model:FindFirstChild("ThemeWorld")
+	if existing then
+		existing:Destroy()
+	end
+	local world = Instance.new("Folder")
+	world.Name = "ThemeWorld"
+	world.Parent = model
+
+	local half = width * 0.5
+	local dist = half + theme.World.ShellOffset
+	local height = theme.World.ShellHeight
+	local role = theme.World.ShellRole
+	local color = theme.Colors[role] or theme.Colors.CastleStone
+	local material = theme.Materials.WorldShell or Enum.Material.Slate
+	placeWorldStrip(
+		offsetLoop(centerline, dist),
+		10,
+		height,
+		height / 2 - 0.2,
+		color,
+		material,
+		1.6,
+		world,
+		role,
+		stripe
+	)
+	placeWorldStrip(
+		offsetLoop(centerline, -dist),
+		10,
+		height,
+		height / 2 - 0.2,
+		color,
+		material,
+		1.6,
+		world,
+		role,
+		stripe
+	)
+	dressShell(offsetLoop(centerline, dist), -1, world, stripe, theme, height)
+	dressShell(offsetLoop(centerline, -dist), 1, world, stripe, theme, height)
+	dressPlaza(world, stripe, theme)
+end
+
+local function currentTheme()
+	local themeId = Workspace:GetAttribute("MiniRacerThemeId")
+	if typeof(themeId) ~= "string" then
+		themeId = TrackThemes.Order[1]
+	end
+	return TrackThemes.get(themeId)
+end
+
+local function buildThemeDecor(model: Model, centerline: { Vector3 }, stripe: CFrame, width: number, theme)
 	local existing = model:FindFirstChild("ThemeDecor")
 	if existing then
 		existing:Destroy()
@@ -748,7 +1460,11 @@ local function buildThemeDecor(model: Model, centerline: { Vector3 }, stripe: CF
 	decor.Name = "ThemeDecor"
 	decor.Parent = model
 
-	buildCastleGate(decor, stripe, width)
+	if theme.World.Gate == "Portal" then
+		buildPortalGate(decor, stripe, width)
+	else
+		buildCastleGate(decor, stripe, width)
+	end
 
 	-- Finish tapestries also ride the circuit twice more. Sponsors × 3.
 	local n = #centerline
@@ -980,7 +1696,6 @@ local function build()
 	})
 	CollectionService:AddTag(spawn, Constants.Track.SpawnTag)
 	themeTexture(spawn, Enum.NormalId.Top, "StartLine", 12, 12)
-	buildThemeDecor(model, centerline, spawnCFrame, width)
 
 	local finish = checkpoint(Constants.Race.CheckpointCount, spawnCFrame, width)
 	finish.Size = Vector3.new(width + 2, 16, 12)
@@ -994,39 +1709,28 @@ local function build()
 	TrackService.ensurePlaza()
 end
 
+function TrackService.applyThemeWorld(themeId: string)
+	local existing = Workspace:FindFirstChild("MiniRacerTrack")
+	if existing == nil or not existing:IsA("Model") then
+		return
+	end
+	local theme = TrackThemes.get(themeId)
+	local stripe = TrackService.getStripeCFrame()
+	local centerline = sampleCenterline()
+	applyBumps(centerline, stripe)
+	applyCurveClimbs(centerline)
+	local width = Constants.Track.RoadWidth
+	buildThemeDecor(existing, centerline, stripe, width, theme)
+	buildThemeWorld(existing, centerline, stripe, width, theme)
+end
+
 function TrackService.buildIfNeeded()
 	local existing = Workspace:FindFirstChild("MiniRacerTrack")
 	if existing == nil then
 		build()
 		return
 	end
-	-- Rebuild banners from current TrackService without replacing the course.
-	-- Barrier/start-line textures are only added the first time ThemeDecor appears.
-	if existing:IsA("Model") then
-		local stripe = TrackService.getStripeCFrame()
-		local centerline = sampleCenterline()
-		applyBumps(centerline, stripe)
-		applyCurveClimbs(centerline)
-		local hadDecor = existing:FindFirstChild("ThemeDecor") ~= nil
-		buildThemeDecor(existing, centerline, stripe, Constants.Track.RoadWidth)
-		if not hadDecor then
-			local decorated = 0
-			for _, instance in existing:GetDescendants() do
-				if instance:IsA("BasePart") and instance.Name == "Barrier" then
-					themeTexture(instance, Enum.NormalId.Left, "Barrier", 15, 6)
-					themeTexture(instance, Enum.NormalId.Right, "Barrier", 15, 6)
-					decorated += 1
-					if decorated % 40 == 0 then
-						task.wait()
-					end
-				end
-			end
-			local spawn = existing:FindFirstChild("StartSpawn")
-			if spawn and spawn:IsA("BasePart") then
-				themeTexture(spawn, Enum.NormalId.Top, "StartLine", 12, 12)
-			end
-		end
-	end
+	TrackService.applyThemeWorld(currentTheme().Id)
 	TrackService.ensurePlaza()
 end
 

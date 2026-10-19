@@ -15,6 +15,38 @@ Supersedes: … (or none)
 
 ---
 
+## 2026-10-19 — Hop is two karts tall
+
+Decided: `Car.JumpHeightFrac = 2.4` (peak ≈ **7.7 studs**, ~0.60s hang). Bomb slab stays **10%** of kart height. Chase cam follows only **35%** of hop lift so the kart pops in frame while racing. Same gravity; boost/slow still scale takeoff by `√mul`. Invisible `BarrierWall` (28) still contains a boosted hop.
+
+Why: The 1.2× hop still read as a twitch on the racing chase cam. Testers asked for at least 2× more obvious, especially during a race.
+
+Supersedes: 2026-10-19 Hop is about one kart tall
+
+## 2026-10-19 — Classic lobby is a castle village in daylight
+
+Decided: Classic lobby is a **clear afternoon village square**, not a dusk limestone lot. Grass is green; plaza pads are cobble; castle roofs are terracotta. Kart pads stay open. Around them: a keep backdrop, cottages, round trees, white picket fences, flowers, and lamp posts. Lighting is even (lower brightness, cool sky, exposure −0.35) so the shop cubes do not blow out.
+
+Why: Testers found the lobby too bright and not grand enough; the bar is Mario Kart Wii Mario Circuit density (castle + town + trees + fences), not a few props on the pads.
+
+Supersedes: 2026-10-19 SciFi is a lit night; Classic courtyard is dressed (Classic plaza props + dusk limestone only)
+
+## 2026-10-19 — SciFi is a lit night; Classic courtyard is dressed
+
+Decided: SciFi stays night/neon but is **readable** (higher ambient, cyan/magenta PointLights on the portal, shell, and plaza). Classic keeps courtyard stone and adds set dressing: torches, merlons, tapestries, plaza fountain/benches/planters.
+
+Why: Testers found SciFi too dark; the castle stone read empty without props.
+
+Supersedes: SciFi lighting was pitch-dark fog with no practical lights
+
+## 2026-10-19 — Theme owns the surroundings
+
+Decided: A theme includes lighting, ground material, and a non-collide world shell — not only rail/plaza colors and banners. v3 rotation is **Classic** (castle grounds: courtyard limestone, dusk fog, curtain walls, existing castle gate) and **SciFi** (metal deck, night/neon, hangar shell, portal gate). Same centerline and `DriveSim`. Off-track tiles keep the instance name `Grass`. No roof over the circuit.
+
+Why: The dressed rails still sat on default blue sky and flat green grass, so the castle gate read as a facade on a field.
+
+Supersedes: theme dress was colors + tagged images only; `TrackThemes.Order` was Classic-only
+
 ## 2026-10-19 — Invisible wall on the rails
 
 Decided: Visual rails stay `BarrierHeight = 6`. An invisible `BarrierWall` on the same line is `BarrierWallHeight = 28`. DriveSim treats both as walls; hops cannot leave the circuit.

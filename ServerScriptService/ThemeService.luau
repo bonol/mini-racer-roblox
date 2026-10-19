@@ -1,4 +1,5 @@
 local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -48,15 +49,91 @@ local function applyImage(instance: Instance, theme)
 	end
 end
 
-local function apply(theme)
+local function applyLighting(theme)
+	local spec = theme.Lighting
+	Lighting.ClockTime = spec.ClockTime
+	Lighting.Brightness = spec.Brightness
+	Lighting.Ambient = spec.Ambient
+	Lighting.OutdoorAmbient = spec.OutdoorAmbient
+	Lighting.FogColor = spec.FogColor
+	Lighting.FogStart = spec.FogStart
+	Lighting.FogEnd = spec.FogEnd
+	Lighting.EnvironmentDiffuseScale = spec.EnvironmentDiffuseScale or 0.5
+	Lighting.EnvironmentSpecularScale = spec.EnvironmentSpecularScale or 0.5
+	Lighting.ExposureCompensation = spec.ExposureCompensation or 0
+	if theme.World.Gate == "Portal" then
+		Lighting.ColorShift_Top = Color3.fromRGB(90, 190, 255)
+		Lighting.ColorShift_Bottom = Color3.fromRGB(50, 20, 90)
+	else
+		Lighting.ColorShift_Top = Color3.fromRGB(196, 214, 235)
+		Lighting.ColorShift_Bottom = Color3.fromRGB(78, 110, 64)
+	end
+
+	local atmos = Lighting:FindFirstChildOfClass("Atmosphere")
+	if spec.Atmosphere then
+		if atmos == nil then
+			atmos = Instance.new("Atmosphere")
+			atmos.Name = "MiniRacerAtmosphere"
+			atmos.Parent = Lighting
+		end
+		atmos.Density = spec.Atmosphere.Density
+		atmos.Offset = spec.Atmosphere.Offset or 0
+		atmos.Color = spec.Atmosphere.Color
+		atmos.Decay = spec.Atmosphere.Decay
+		atmos.Haze = spec.Atmosphere.Haze
+		atmos.Glare = spec.Atmosphere.Glare
+	elseif atmos then
+		atmos:Destroy()
+	end
+
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	if sky == nil then
+		sky = Instance.new("Sky")
+		sky.Name = "MiniRacerSky"
+		sky.Parent = Lighting
+	end
+	local portal = theme.World.Gate == "Portal"
+	sky.CelestialBodiesShown = true
+	sky.StarCount = if portal then 3000 else 0
+	sky.SunAngularSize = if portal then 0 else 12
+	sky.MoonAngularSize = if portal then 0 else 0
+	local faces = theme.Sky
+	if faces then
+		if faces.Bk ~= "" then
+			sky.SkyboxBk = faces.Bk
+		end
+		if faces.Dn ~= "" then
+			sky.SkyboxDn = faces.Dn
+		end
+		if faces.Ft ~= "" then
+			sky.SkyboxFt = faces.Ft
+		end
+		if faces.Lf ~= "" then
+			sky.SkyboxLf = faces.Lf
+		end
+		if faces.Rt ~= "" then
+			sky.SkyboxRt = faces.Rt
+		end
+		if faces.Up ~= "" then
+			sky.SkyboxUp = faces.Up
+		end
+	end
+end
+
+local function paintFolders(theme)
 	for _, folderName in { "MiniRacerTrack", "KartPlaza", "KartGrid" } do
 		local folder = Workspace:FindFirstChild(folderName)
 		if folder then
 			for _, instance in folder:GetDescendants() do
 				if instance:IsA("BasePart") then
-					local color = theme.Colors[colorRole(instance)]
+					local role = colorRole(instance)
+					local color = theme.Colors[role]
 					if color then
 						instance.Color = color
+					end
+					local material = theme.Materials[role]
+					if material then
+						instance.Material = material
 					end
 				end
 			end
@@ -65,7 +142,15 @@ local function apply(theme)
 	for _, instance in CollectionService:GetTagged(IMAGE_TAG) do
 		applyImage(instance, theme)
 	end
+end
+
+local function apply(theme)
 	Workspace:SetAttribute("MiniRacerThemeId", theme.Id)
+	applyLighting(theme)
+	paintFolders(theme)
+	local TrackService = require(script.Parent:WaitForChild("TrackService"))
+	TrackService.applyThemeWorld(theme.Id)
+	paintFolders(theme)
 end
 
 function ThemeService.start()
